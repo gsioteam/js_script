@@ -1,7 +1,7 @@
 name: js_script
 description: Run JS script.
 version: 0.0.1
-homepage:
+homepage: https://github.com/gsioteam/js_script
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
