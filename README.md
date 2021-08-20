@@ -2,14 +2,66 @@
 
 Run JS script.
 
-## Getting Started
+## Usage
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+```dart
+// Create a JS context.
+JsScript script = JsScript();
+// Define a class.
+var classInfo = ClassInfo<TestClass>(
+    newInstance: (_) => TestClass(),
+    fields: {
+    "field": JsField.ins(
+        get: (obj) => obj.field,
+        set: (obj, val) => obj.field=val,
+    ),
+    },
+    functions: {
+    "method": JsFunction.ins((obj, argv) => obj.method()),
+    "wait": JsFunction.ins((obj, argv) => obj.wait(argv[0])),
+    }
+);
+// Send the class info to JS context.
+script.addClass(classInfo);
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+// Have some test.
+script.eval("var obj = new TestClass()");
+test("[JS] obj.field == 1", script.eval("obj.field") == 1);
+test("[JS] obj.method() == 3", script.eval("obj.method()") == 3);
+
+JsValue jsValue = script.eval("obj");
+script.eval("obj.field = 3;");
+test("[Dart] obj.field == 3", jsValue.dartObject.field == 3);
+test("[Dart] obj.method() == 9", jsValue.dartObject.method() == 9);
+
+{
+    // Send a dart object to JS context.
+    TestClass obj2 = TestClass();
+    obj2.field = 4;
+    JsValue jsValue = script.bind(obj2, classInfo: classInfo);
+    test("[JS] obj2.field == 4", jsValue["field"] == 4);
+}
+
+{
+    // Send a dart function to JS context.
+    JsValue func = script.function((argv) => "hello" + argv[0]);
+    test("[JS] call function", func.call(["world"]) == "helloworld");
+}
+
+{
+    // Using the Future as Promise in JS.
+    // And using the Promise as a Future.
+    JsValue jsPromise = script.eval("""
+    new Promise(async function(resolve, reject) {
+        await obj.wait(3);
+        resolve("over");
+    });
+    """);
+    jsPromise.retain();
+    var time = DateTime.now();
+    var res = await jsPromise.asFuture;
+    jsPromise.release();
+    test("[JS] wait for ${DateTime.now().difference(time).inMilliseconds}ms", res == "over");
+}
+```
 
