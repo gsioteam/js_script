@@ -80,23 +80,35 @@ class JsValue {
     _disposed = true;
   }
 
-  void set(String name, dynamic value) {
+  void set(dynamic key, dynamic value) {
     assert(!_disposed);
     script._arguments[0].setValue(this);
-    script._arguments[1].setString(name, script);
+    if (key is String) {
+      script._arguments[1].setString(key, script);
+    } else if (key is int) {
+      script._arguments[1].setInt(key);
+    } else {
+      throw Exception("key must be a String or int");
+    }
     script._arguments[2].set(value, script);
     script._action(JS_ACTION_SET, 3);
   }
 
-  dynamic get(String name) {
+  dynamic get(dynamic key) {
     assert(!_disposed);
     script._arguments[0].setValue(this);
-    script._arguments[1].setString(name, script);
+    if (key is String) {
+      script._arguments[1].setString(key, script);
+    } else if (key is int) {
+      script._arguments[1].setInt(key);
+    } else {
+      throw Exception("key must be a String or int");
+    }
     return script._action(JS_ACTION_GET, 2, (results, length) => results[0].get(script));
   }
 
-  operator[]= (String name, dynamic value) => set(name, value);
-  operator[] (String name) => get(name);
+  operator[]= (dynamic key, dynamic value) => set(key, value);
+  operator[] (dynamic key) => get(key);
 
   dynamic invoke(String name, [List argv = const [],]) {
     assert(!_disposed);

@@ -36,6 +36,7 @@ const int JS_ACTION_BIND = 6;
 const int JS_ACTION_PROMISE_COMPLETE = 7;
 const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
+const int JS_ACTION_RUN = 10;
 
 const int DART_ACTION_CONSTRUCTOR = 1;
 const int DART_ACTION_CALL = 2;
@@ -729,11 +730,18 @@ public:
             case JS_ACTION_SET: {
                 if (argc == 3 &&
                 arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                arguments[1].type == ARG_TYPE_STRING) {
+                        (arguments[1].type == ARG_TYPE_STRING ||
+                        arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
-                    const char *name = (const char *)arguments[1].ptrValue;
-                    JSAtom atom = JS_NewAtom(context, name);
                     JSValue val = getArgument(arguments[2]);
+
+                    JSAtom atom;
+                    if (arguments[1].type == ARG_TYPE_STRING) {
+                        const char *name = (const char *)arguments[1].ptrValue;
+                        atom = JS_NewAtom(context, name);
+                    } else {
+                        atom = JS_NewAtomUInt32(context, arguments[1].intValue);
+                    }
 
                     bool res = JS_SetProperty(context, value, atom, val) == TRUE;
                     JS_FreeAtom(context, atom);
@@ -754,10 +762,17 @@ public:
             case JS_ACTION_GET: {
                 if (argc == 2 &&
                         arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                        arguments[1].type == ARG_TYPE_STRING) {
+                        (arguments[1].type == ARG_TYPE_STRING ||
+                         arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
-                    const char *name = (const char *)arguments[1].ptrValue;
-                    JSAtom atom = JS_NewAtom(context, name);
+
+                    JSAtom atom;
+                    if (arguments[1].type == ARG_TYPE_STRING) {
+                        const char *name = (const char *)arguments[1].ptrValue;
+                        atom = JS_NewAtom(context, name);
+                    } else {
+                        atom = JS_NewAtomUInt32(context, arguments[1].intValue);
+                    }
 
                     JSValue val = JS_GetProperty(context, value, atom);
                     JS_FreeAtom(context, atom);
@@ -925,6 +940,58 @@ public:
                     } else {
                         results[0].set("Object is not function");
                         return -1;
+                    }
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_RUN: {
+                if (argc == 2 &&
+                    arguments[0].type == ARG_TYPE_STRING &&
+                    arguments[1].type == ARG_TYPE_STRING) {
+                    const char *code = (const char *)arguments[0].ptrValue;
+                    const char *filename = (const char *)arguments[1].ptrValue;
+
+                    string strcode(code);
+                    if (!has_export(strcode)) {
+                        stringstream ss;
+                        ss << "const module = {exports: {}}; let exports = module.exports;" << endl;
+                        ss << code << endl;
+                        ss << "export default module.exports;" << endl;
+                        strcode = ss.str();
+                    }
+
+                    JSValue ret = JS_Eval(context, strcode.c_str(), strcode.size(), filename,
+                            JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+                    if (JS_IsException(ret)) {
+                        JSValue ex = JS_GetException(context);
+                        temp_string = errorString(ex);
+                        results[0].set(temp_string.c_str());
+                        return -1;
+                    } else {
+                        int tag = JS_VALUE_GET_TAG(ret);
+                        if (tag == JS_TAG_MODULE) {
+                            JSValue val = JS_EvalFunction(context, ret);
+                            if (JS_IsException(val)) {
+                                JSValue ex = JS_GetException(context);
+                                temp_string = errorString(ex);
+                                results[0].set(temp_string.c_str());
+                                return -1;
+                            } else {
+                                JSModuleDef *module = (JSModuleDef *)JS_VALUE_GET_PTR(ret);
+                                JSValue data = JS_GetModuleDefault(context, module);
+                                if (setArgument(results[0], data)) {
+                                    temp_results.push_back(data);
+                                } else {
+                                    JS_FreeValue(context, data);
+                                }
+                                return 1;
+                            }
+                        } else {
+                            results[0].set("Script is not a module");
+                            return -1;
+                        }
+
                     }
                 }
                 results[0].set("WrongArguments");

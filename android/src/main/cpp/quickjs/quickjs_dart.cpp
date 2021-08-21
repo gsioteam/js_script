@@ -730,11 +730,18 @@ public:
             case JS_ACTION_SET: {
                 if (argc == 3 &&
                 arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                arguments[1].type == ARG_TYPE_STRING) {
+                        (arguments[1].type == ARG_TYPE_STRING ||
+                        arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
-                    const char *name = (const char *)arguments[1].ptrValue;
-                    JSAtom atom = JS_NewAtom(context, name);
                     JSValue val = getArgument(arguments[2]);
+
+                    JSAtom atom;
+                    if (arguments[1].type == ARG_TYPE_STRING) {
+                        const char *name = (const char *)arguments[1].ptrValue;
+                        atom = JS_NewAtom(context, name);
+                    } else {
+                        atom = JS_NewAtomUInt32(context, arguments[1].intValue);
+                    }
 
                     bool res = JS_SetProperty(context, value, atom, val) == TRUE;
                     JS_FreeAtom(context, atom);
@@ -755,10 +762,17 @@ public:
             case JS_ACTION_GET: {
                 if (argc == 2 &&
                         arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                        arguments[1].type == ARG_TYPE_STRING) {
+                        (arguments[1].type == ARG_TYPE_STRING ||
+                         arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
-                    const char *name = (const char *)arguments[1].ptrValue;
-                    JSAtom atom = JS_NewAtom(context, name);
+
+                    JSAtom atom;
+                    if (arguments[1].type == ARG_TYPE_STRING) {
+                        const char *name = (const char *)arguments[1].ptrValue;
+                        atom = JS_NewAtom(context, name);
+                    } else {
+                        atom = JS_NewAtomUInt32(context, arguments[1].intValue);
+                    }
 
                     JSValue val = JS_GetProperty(context, value, atom);
                     JS_FreeAtom(context, atom);
