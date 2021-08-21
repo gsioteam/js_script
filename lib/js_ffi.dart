@@ -15,10 +15,10 @@ typedef JsContextClearCacheFunc = Void Function(Pointer context);
 typedef JsContextRegisterClassFunc = Pointer Function(Pointer context, Pointer<JsClass> jsClass, Int32 id);
 typedef JsContextHasPendingJobFunc = Int32 Function(Pointer context);
 typedef JsContextExecutePendingJobFunc = Int32 Function(Pointer context);
+typedef JsContextNewPromiseFunc = Pointer Function(Pointer context);
 
 typedef JsPrintHandlerFunc = Void Function(Int32 type, Pointer<Utf8> str);
 typedef JsToDartActionFunc = Int32 Function(Pointer context, Int32 type, Int32 argc);
-typedef JsContextNewPromiseFunc = Pointer Function(Pointer context);
 
 class JsHandlers extends Struct {
   @Int32()

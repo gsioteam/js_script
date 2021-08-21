@@ -36,11 +36,14 @@ const int JS_ACTION_BIND = 6;
 const int JS_ACTION_PROMISE_COMPLETE = 7;
 const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
+const int JS_ACTION_RUN = 10;
 
 const int DART_ACTION_CONSTRUCTOR = 1;
 const int DART_ACTION_CALL = 2;
 const int DART_ACTION_DELETE = 3;
 const int DART_ACTION_CALL_FUNCTION = 4;
+const int DART_ACTION_MODULE_NAME = 5;
+const int DART_ACTION_LOAD_MODULE = 6;
 
 const int ARG_TYPE_NULL = 0;
 const int ARG_TYPE_INT32 = 1;
@@ -155,6 +158,27 @@ struct JsPromise {
         JS_FreeValue(ctx, target);
     }
 };
+
+
+bool isWordChar(char x) {
+    return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z') || (x >= '0' && x <= '9') || x == '_';
+}
+
+bool has_export(const string &strcode) {
+    static string key("export");
+    float found = false;
+    size_t off = 0;
+    while (off < strcode.size()) {
+        size_t idx = strcode.find(key, off);
+        if (idx < strcode.size()) {
+            bool c1 = idx == 0 || !isWordChar(strcode[idx - 1]), c2 = (idx + key.size()) == strcode.size() || !isWordChar(strcode[idx + key.size()]);
+            found = c1 && c2;
+            if (found) break;
+        }
+        off = idx < strcode.size() ? idx + key.size() : idx;
+    }
+    return found;
+}
 
 class JsContext {
     JsArgument  *arguments;
@@ -316,15 +340,69 @@ class JsContext {
         self->toDartAction(DART_ACTION_DELETE, 1);
     }
 
+    char *copyString(const char *str) {
+        size_t len = strlen(str);
+        char *newstr = (char *)js_malloc(context, len + 1);
+        memcpy(newstr, str, len);
+        newstr[len] = 0;
+        return newstr;
+    }
+
+    static void pathCombine(string &path, const string &seg) {
+        if (seg == ".") {
+        } else if (seg == "..") {
+            while (path[path.length() - 1] == '/') {
+                path.pop_back();
+            }
+            path.resize(path.find_last_of('/'));
+        } else {
+            if (path[path.length() - 1] == '/') {
+                path += seg;
+            } else {
+                path.push_back('/');
+                path += seg;
+            }
+        }
+    }
+
     static char *module_name(JSContext *ctx,
             const char *module_base_name,
             const char *module_name, void *opaque) {
-        return nullptr;
+        JsContext *self = (JsContext *)opaque;
+        self->arguments[0].set(module_base_name);
+        self->arguments[1].set(module_name);
+        int ret = self->toDartAction(DART_ACTION_MODULE_NAME, 2);
+        if (ret > 0 && self->results[0].type == ARG_TYPE_STRING) {
+            return self->copyString((const char *)self->results[0].ptrValue);
+        } else {
+            return nullptr;
+        }
     }
 
     static JSModuleDef *module_loader(JSContext *ctx,
             const char *module_name, void *opaque) {
-        return nullptr;
+        JsContext *self = (JsContext *)opaque;
+        self->arguments[0].set(module_name);
+        int ret = self->toDartAction(DART_ACTION_LOAD_MODULE, 1);
+        JSModuleDef *module = nullptr;
+        if (ret > 0 && self->results[0].type == ARG_TYPE_STRING) {
+            string strcode((const char *)self->results[0].ptrValue);
+            if (!has_export(strcode)) {
+                stringstream ss;
+                ss << "const module = {exports: {}}; let exports = module.exports;" << endl;
+                ss << strcode << endl;
+                ss << "export default module.exports;" << endl;
+                strcode = ss.str();
+            }
+            JSValue val = JS_Eval(self->context, strcode.data(),
+                    (int)strcode.size(), module_name,
+                    JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            if (!JS_IsException(val)) {
+                module = (JSModuleDef *)JS_VALUE_GET_PTR(val);
+                JS_FreeValue(self->context, val);
+            }
+        }
+        return module;
     }
 
     static JSValue consolePrint(JSContext *ctx, int type, int argc, JSValueConst *argv) {
@@ -848,6 +926,58 @@ public:
                     } else {
                         results[0].set("Object is not function");
                         return -1;
+                    }
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_RUN: {
+                if (argc == 2 &&
+                    arguments[0].type == ARG_TYPE_STRING &&
+                    arguments[1].type == ARG_TYPE_STRING) {
+                    const char *code = (const char *)arguments[0].ptrValue;
+                    const char *filename = (const char *)arguments[1].ptrValue;
+
+                    string strcode(code);
+                    if (!has_export(strcode)) {
+                        stringstream ss;
+                        ss << "const module = {exports: {}}; let exports = module.exports;" << endl;
+                        ss << code << endl;
+                        ss << "export default module.exports;" << endl;
+                        strcode = ss.str();
+                    }
+
+                    JSValue ret = JS_Eval(context, strcode.c_str(), strcode.size(), filename,
+                            JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+                    if (JS_IsException(ret)) {
+                        JSValue ex = JS_GetException(context);
+                        temp_string = errorString(ex);
+                        results[0].set(temp_string.c_str());
+                        return -1;
+                    } else {
+                        int tag = JS_VALUE_GET_TAG(ret);
+                        if (tag == JS_TAG_MODULE) {
+                            JSValue val = JS_EvalFunction(context, ret);
+                            if (JS_IsException(val)) {
+                                JSValue ex = JS_GetException(context);
+                                temp_string = errorString(ex);
+                                results[0].set(temp_string.c_str());
+                                return -1;
+                            } else {
+                                JSModuleDef *module = (JSModuleDef *)JS_VALUE_GET_PTR(ret);
+                                JSValue data = JS_GetModuleDefault(context, module);
+                                if (setArgument(results[0], data)) {
+                                    temp_results.push_back(data);
+                                } else {
+                                    JS_FreeValue(context, data);
+                                }
+                                return 1;
+                            }
+                        } else {
+                            results[0].set("Script is not a module");
+                            return -1;
+                        }
+
                     }
                 }
                 results[0].set("WrongArguments");

@@ -148,6 +148,7 @@ const int JS_ACTION_BIND = 6;
 const int JS_ACTION_PROMISE_COMPLETE = 7;
 const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
+const int JS_ACTION_RUN = 10;
 
 const int JS_ACTION_IS_ARRAY = 10;
 const int JS_ACTION_IS_FUNCTION = 11;
@@ -157,6 +158,8 @@ const int DART_ACTION_CONSTRUCTOR = 1;
 const int DART_ACTION_CALL = 2;
 const int DART_ACTION_DELETE = 3;
 const int DART_ACTION_CALL_FUNCTION = 4;
+const int DART_ACTION_MODULE_NAME = 5;
+const int DART_ACTION_LOAD_MODULE = 6;
 
 const int ARG_TYPE_NULL = 0;
 const int ARG_TYPE_INT32 = 1;

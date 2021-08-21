@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:js_script/filesystems.dart';
 import 'package:js_script/js_script.dart';
 import 'package:js_script/types.dart';
 
@@ -24,10 +25,12 @@ class TestClass {
 class _MyAppState extends State<MyApp> {
 
   late List<Widget> children = [];
+  late Future<ByteData> data;
 
   @override
   void initState() {
     super.initState();
+    data = rootBundle.load("res/npmpack.asar");
   }
 
   dispose() {
@@ -46,7 +49,17 @@ class _MyAppState extends State<MyApp> {
   }
 
   void run() async {
-    JsScript script = JsScript();
+    JsScript script = JsScript(
+      fileSystems: [
+        AsarFileSystem(await data),
+        MemoryFileSystem({
+          "/test.js": """
+          const md5 = require('md5');
+          module.exports = md5('hello');
+          """
+        })
+      ]
+    );
     var classInfo = ClassInfo<TestClass>(
       newInstance: (_) => TestClass(),
       fields: {
@@ -116,6 +129,15 @@ class _MyAppState extends State<MyApp> {
       test("[JS] call dart method 100000 times, using ${DateTime.now().difference(time).inMilliseconds}ms", res == 900000);
     }
 
+    {
+      var ret = script.eval("""
+      const md5 = require('md5');
+      md5('hello');
+      """);
+      test("[JS] require md5", ret == '5d41402abc4b2a76b9719d911017c592');
+      ret = script.run("test.js");
+      test("[JS] run file in FileSystem", ret == '5d41402abc4b2a76b9719d911017c592');
+    }
 
     script.dispose();
   }

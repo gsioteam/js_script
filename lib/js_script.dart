@@ -1,16 +1,27 @@
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'types.dart';
 import 'js_ffi.dart';
+import 'package:path/path.dart' as path;
 
 enum JsValueType {
   JsObject,
   DartInstance,
   DartClass
+}
+
+abstract class JsFileSystem {
+  final Directory? mount;
+  JsFileSystem([this.mount]);
+
+  bool exist(String filename);
+  String? read(String filename);
 }
 
 class JsValue {
@@ -22,22 +33,22 @@ class JsValue {
 
   JsValue._js(this.script, this._ptr) : type = JsValueType.JsObject, dartObject = null {
     script._cache.add(this);
-    autoRelease();
+    _retainCount = 1;
+    delayRelease();
   }
 
   JsValue._instance(this.script, this._ptr, this.dartObject) : type = JsValueType.DartInstance {
     script._cache.add(this);
-    autoRelease();
+    _retainCount = 1;
+    delayRelease();
   }
 
   JsValue._class(this.script, this._ptr, this.dartObject) : type = JsValueType.DartClass {
     script._cache.add(this);
-    autoRelease();
+    _retainCount = 1;
+    delayRelease();
   }
 
-
-  static Set<JsValue> autoReleasePool = Set();
-  static bool _waitRelease = false;
   int _retainCount = 0;
   void _dispose() {
     assert(!_disposed);
@@ -46,16 +57,7 @@ class JsValue {
     _disposed = true;
   }
 
-  static void _releaseAll() {
-    _waitRelease = false;
-    for (var obj in autoReleasePool) {
-      obj.release();
-    }
-    autoReleasePool.clear();
-  }
-
   int retain() {
-    autoReleasePool.remove(this);
     return ++_retainCount;
   }
 
@@ -67,15 +69,10 @@ class JsValue {
     return _retainCount;
   }
 
-  void autoRelease() {
-    if (autoReleasePool.contains(this)) return;
-    autoReleasePool.add(this);
-    if (!_waitRelease) {
-      _waitRelease = true;
-      Future.delayed(Duration(milliseconds: 30), () {
-        _releaseAll();
-      });
-    }
+  void delayRelease() {
+    Future.delayed(Duration(milliseconds: 30), () {
+      release();
+    });
   }
 
   void _internalDispose() {
@@ -229,9 +226,12 @@ class JsScript {
   bool _disposed = false;
   void Function(String)? onUncaughtError;
 
+  List<JsFileSystem> fileSystems;
+
   JsScript({
     this.maxArguments = MAX_ARGUMENTS,
-    this.onUncaughtError
+    this.onUncaughtError,
+    this.fileSystems = const []
   }) : _rawArguments = malloc.allocate(maxArguments * sizeOf<JsArgument>()),
         _rawResults = malloc.allocate(maxArguments * sizeOf<JsArgument>()) {
     for (int i = 0; i < maxArguments; ++i) {
@@ -293,6 +293,19 @@ class JsScript {
     return _action(JS_ACTION_EVAL, 2, (results, length) => results[0].get(this));
   }
 
+  run(String filepath) {
+    String? path = _findPath("/", filepath);
+    if (path != null) {
+      String? code = _loadCode(path);
+      if (code != null) {
+        _arguments[0].setString(code, this);
+        _arguments[1].setString(path, this);
+        return _action(JS_ACTION_RUN, 2, (results, length) => results[0].get(this));
+      }
+    }
+    throw Exception("File not found. $filepath");
+  }
+
   List<Pointer> _temp = [];
 
   void _clearTemporary() {
@@ -330,6 +343,77 @@ class JsScript {
         }
       }
     }
+  }
+
+  String? _findPath(String basename, String module) {
+    if (fileSystems.isEmpty) return null;
+    String filepath;
+    if (module[0] == "/") {
+      filepath = module;
+    } else {
+      filepath = path.join(basename, '..', module);
+    }
+    if (filepath[0] != "/") filepath = "/" + filepath;
+    filepath = path.normalize(filepath);
+    String ext = path.extension(filepath);
+
+    if (ext.isEmpty) {
+      for (var fileSystem in fileSystems) {
+        if (fileSystem.mount != null) {
+          String mountPath = "${fileSystem.mount!.path}/";
+          if (filepath.startsWith(mountPath)) {
+            filepath = filepath.replaceFirst(fileSystem.mount!.path, "");
+          } else {
+            continue;
+          }
+        }
+        String? testFile(String filepath) {
+          String newPath = "$filepath.js";
+          if (fileSystem.exist(newPath)) return newPath;
+          newPath = "$filepath.json";
+          if (fileSystem.exist(newPath)) return newPath;
+          newPath = "$filepath/package.json";
+          if (fileSystem.exist(newPath)) {
+            var code = fileSystem.read(newPath);
+            var json = jsonDecode(code!);
+            if (json is Map) {
+              var main = json["main"];
+              if (main != null) {
+                return "$filepath/$main";
+              }
+            }
+          }
+          return null;
+        }
+
+        String? newPath = testFile(filepath);
+        if (newPath != null)
+          return newPath;
+
+        String basename = path.dirname(filepath);
+        while (true) {
+          if (basename.isEmpty) break;
+          String modulePath = path.join(basename, 'node_modules', module);
+          var newPath = testFile(modulePath);
+          if (newPath != null) return newPath;
+          basename = path.dirname(basename);
+        }
+
+      }
+    } else {
+      for (var fileSystem in fileSystems) {
+        if (fileSystem.exist(filepath)) return filepath;
+      }
+    }
+  }
+
+  String? _loadCode(String path) {
+    if (fileSystems.isEmpty) return null;
+    for (var fileSystem in fileSystems) {
+      var code = fileSystem.read(path);
+      if (code != null) return code;
+    }
+    return null;
   }
 
   List _tempArgv = [];
@@ -418,6 +502,57 @@ class JsScript {
             } else {
               _results[0].setString("Target not found.", this);
               return -1;
+            }
+          } else {
+            _results[0].setString("Wrong arguments", this);
+            return -1;
+          }
+        }
+        case DART_ACTION_MODULE_NAME: {
+          if (argc == 2 &&
+              _arguments[0].type == ARG_TYPE_STRING &&
+              _arguments[1].type == ARG_TYPE_STRING) {
+            String basename = _arguments[0].get(this);
+            String module = _arguments[1].get(this);
+            String? ret = _findPath(basename, module);
+            if (ret == null) {
+              return 0;
+            }
+            _results[0].setString(ret, this);
+            return 1;
+          } else {
+            _results[0].setString("Wrong arguments", this);
+            return -1;
+          }
+        }
+        case DART_ACTION_LOAD_MODULE: {
+          if (argc == 1 &&
+              _arguments[0].type == ARG_TYPE_STRING) {
+            String filename = _arguments[0].get(this);
+            var code = _loadCode(filename);
+            if (code != null) {
+              _results[0].setString(code, this);
+              return 1;
+            } else {
+              return 0;
+            }
+          } else {
+            _results[0].setString("Wrong arguments", this);
+            return -1;
+          }
+        }
+        case DART_ACTION_MODULE_NAME: {
+          if (argc == 2 &&
+              _arguments[0].type == ARG_TYPE_STRING &&
+              _arguments[1].type == ARG_TYPE_STRING) {
+            String basename = _arguments[0].get(this);
+            String module = _arguments[0].get(this);
+            String? result = _findPath(basename, module);
+            if (result != null) {
+              _results[0].setString(result, this);
+              return 1;
+            } else {
+              return 0;
             }
           } else {
             _results[0].setString("Wrong arguments", this);
