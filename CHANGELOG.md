@@ -4,6 +4,7 @@
 - Added asar file support.
 - Added npm pack support.
 - Run file in FileSystem.
+- Set and get property by index.
 
 ## 0.0.1
 
