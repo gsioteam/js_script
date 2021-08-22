@@ -105,10 +105,8 @@ class _MyAppState extends State<MyApp> {
         resolve("over");
       });
       """);
-      jsPromise.retain();
       var time = DateTime.now();
       var res = await jsPromise.asFuture;
-      jsPromise.release();
       test("[JS] wait for ${DateTime.now().difference(time).inMilliseconds}ms", res == "over");
     }
 
