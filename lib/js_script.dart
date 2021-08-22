@@ -685,6 +685,18 @@ class JsScript {
         Pointer rawPtr = results[0].ptrValue;
         _instances[rawPtr] = func;
         var ptr = binder.retainValue(_context, rawPtr);
+        return JsValue._instance(this, ptr.ref.ptrValue, func);
+      } else {
+        throw Exception("Wrong result");
+      }
+    });
+  }
+
+  JsValue newObject() {
+    return _action(JS_ACTION_NEW_OBJECT, 0, (results, len) {
+      if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
+        Pointer rawPtr = results[0].ptrValue;
+        var ptr = binder.retainValue(_context, rawPtr);
         return JsValue._js(this, ptr.ref.ptrValue);
       } else {
         throw Exception("Wrong result");

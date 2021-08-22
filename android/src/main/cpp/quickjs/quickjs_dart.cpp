@@ -39,6 +39,7 @@ const int JS_ACTION_CALL = 9;
 const int JS_ACTION_RUN = 10;
 const int JS_ACTION_RUN_PROMISE = 11;
 const int JS_ACTION_PROPERTY_NAMES = 12;
+const int JS_ACTION_NEW_OBJECT = 13;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;
@@ -914,6 +915,9 @@ public:
                         context, function_callback, 0, 0, 1,
                         &data, function_finalizer, func);
                 func->value = value;
+                void *ptr = JS_VALUE_GET_PTR(value);
+                JS_SetProperty(context, value, private_key,
+                        JS_NewBigInt64(context, (int64_t)ptr));
                 temp_results.push_back(value);
                 results[0].setPointer(JS_VALUE_GET_PTR(value));
                 return 1;
@@ -1068,6 +1072,12 @@ public:
                 }
                 results[0].set("WrongArguments");
                 return -1;
+            }
+            case JS_ACTION_NEW_OBJECT: {
+                JSValue obj = JS_NewObject(context);
+                results[0].setPointer(JS_VALUE_GET_PTR(obj));
+                temp_results.push_back(obj);
+                return 1;
             }
             case JS_ACTION_IS_ARRAY: {
                 if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
