@@ -153,6 +153,7 @@ const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
 const int JS_ACTION_RUN = 10;
 const int JS_ACTION_RUN_PROMISE = 11;
+const int JS_ACTION_PROPERTY_NAMES = 12;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;

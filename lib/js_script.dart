@@ -9,6 +9,7 @@ import 'package:ffi/ffi.dart';
 import 'types.dart';
 import 'js_ffi.dart';
 import 'package:path/path.dart' as path;
+export 'types.dart';
 
 enum JsValueType {
   JsObject,
@@ -184,6 +185,15 @@ class JsValue {
     return completer.future;
   }
 
+  List<String> getOwnPropertyNames() {
+    assert(!_disposed);
+    script._arguments[0].setValue(this);
+    return script._action(JS_ACTION_PROPERTY_NAMES, 1, (results, length) {
+      String ret = results[0].get(script);
+      return ret.split(",");
+    });
+  }
+
   @override
   String toString() {
     if (_disposed) {
@@ -202,7 +212,6 @@ class JsValue {
       });
     }
   }
-
 }
 
 void _printHandler(int type, Pointer<Utf8> str) {

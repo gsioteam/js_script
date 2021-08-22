@@ -1,3 +1,7 @@
+## 0.0.4
+
+- Added `getOwnPropertyNames`
+
 ## 0.0.2
 
 - Added FileSystem support.

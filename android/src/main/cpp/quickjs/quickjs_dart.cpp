@@ -38,6 +38,7 @@ const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
 const int JS_ACTION_RUN = 10;
 const int JS_ACTION_RUN_PROMISE = 11;
+const int JS_ACTION_PROPERTY_NAMES = 12;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;
@@ -716,6 +717,7 @@ public:
                     if (JS_IsException(val)) {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
@@ -764,6 +766,7 @@ public:
                     } else {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
                         results[0].set(temp_string.c_str());
                         return -1;
                     }
@@ -792,6 +795,7 @@ public:
                     if (JS_IsException(val)) {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
@@ -831,6 +835,7 @@ public:
                     if (JS_IsException(val)) {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
@@ -854,6 +859,7 @@ public:
                         if (JS_IsException(ret)) {
                             JSValue ex = JS_GetException(context);
                             temp_string = errorString(ex);
+                            JS_FreeValue(context, ex);
                             results[0].set(temp_string.c_str());
                             return -1;
                         } else {
@@ -939,6 +945,7 @@ public:
                         if (JS_IsException(val)) {
                             JSValue ex = JS_GetException(context);
                             temp_string = errorString(ex);
+                            JS_FreeValue(context, ex);
                             results[0].set(temp_string.c_str());
                             return -1;
                         } else {
@@ -978,6 +985,7 @@ public:
                     if (JS_IsException(ret)) {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
@@ -987,6 +995,7 @@ public:
                             if (JS_IsException(val)) {
                                 JSValue ex = JS_GetException(context);
                                 temp_string = errorString(ex);
+                                JS_FreeValue(context, ex);
                                 results[0].set(temp_string.c_str());
                                 return -1;
                             } else {
@@ -1028,6 +1037,34 @@ public:
                     JS_FreeValue(context, resolved);
 
                     return 0;
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_PROPERTY_NAMES: {
+                if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
+                    JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
+                    JSPropertyEnum *propertyEnum = nullptr;
+                    uint32_t length = 0;
+                    int ret = JS_GetOwnPropertyNames(context, &propertyEnum, &length, obj, JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
+                    if (ret < 0) {
+                        JSValue ex = JS_GetException(context);
+                        temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
+                        results[0].set(temp_string.c_str());
+                        return -1;
+                    } else {
+                        temp_results.clear();
+                        for (int i = 0; i < length; ++i) {
+                            const char * chs = JS_AtomToCString(context, propertyEnum[i].atom);
+                            if (i != 0) {
+                                temp_string.push_back(',');
+                            }
+                            temp_string += chs;
+                        }
+                        results[0].set(temp_string.c_str());
+                        return 1;
+                    }
                 }
                 results[0].set("WrongArguments");
                 return -1;
