@@ -37,6 +37,11 @@ const int JS_ACTION_PROMISE_COMPLETE = 7;
 const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
 const int JS_ACTION_RUN = 10;
+const int JS_ACTION_RUN_PROMISE = 11;
+
+const int JS_ACTION_IS_ARRAY = 100;
+const int JS_ACTION_IS_FUNCTION = 101;
+const int JS_ACTION_IS_CONSTRUCTOR = 102;
 
 const int DART_ACTION_CONSTRUCTOR = 1;
 const int DART_ACTION_CALL = 2;
@@ -577,6 +582,8 @@ class JsContext {
     string temp_string;
     JsArgument tempArgument;
     vector<JSValue> classVector;
+    JSValue promise;
+    JSValue promiseResolve;
 
 public:
     static JsContext *_temp;
@@ -631,6 +638,9 @@ public:
         }, "global", 0), JS_UNDEFINED, 0);
         JS_FreeAtom(context, globalAtom);
 
+        promise = JS_GetPropertyStr(context, global, "Promise");
+        promiseResolve = JS_GetPropertyStr(context, promise, "resolve");
+
         JS_FreeValue(context, global);
     }
 
@@ -645,6 +655,8 @@ public:
         JS_FreeAtom(context, prototype_key);
         JS_FreeAtom(context, toString_key);
         JS_FreeValue(context, init_object);
+        JS_FreeValue(context, promise);
+        JS_FreeValue(context, promiseResolve);
 
         JS_FreeContext(context);
         JS_FreeRuntime(runtime);
@@ -993,6 +1005,56 @@ public:
                         }
 
                     }
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_RUN_PROMISE: {
+                if (argc == 3 &&
+                    arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
+                    arguments[1].type == ARG_TYPE_MANAGED_VALUE &&
+                    arguments[2].type == ARG_TYPE_MANAGED_VALUE) {
+                    JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
+                    JSValue resolve = JS_MKPTR(JS_TAG_OBJECT, arguments[1].ptrValue);
+                    JSValue reject = JS_MKPTR(JS_TAG_OBJECT, arguments[2].ptrValue);
+
+                    JSValue resolved = JS_Call(context, promiseResolve, promise, 1, &obj);
+                    JSAtom then = JS_NewAtom(context, "then");
+                    JSAtom _catch = JS_NewAtom(context, "catch");
+                    JS_FreeValue(context, JS_Invoke(context, resolved, then, 1, &resolve));
+                    JS_FreeValue(context, JS_Invoke(context, resolved, _catch, 1, &reject));
+                    JS_FreeAtom(context, then);
+                    JS_FreeAtom(context, _catch);
+                    JS_FreeValue(context, resolved);
+
+                    return 0;
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_IS_ARRAY: {
+                if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
+                    JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
+                    results[0].set((bool)JS_IsArray(context, obj));
+                    return 1;
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_IS_FUNCTION: {
+                if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
+                    JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
+                    results[0].set((bool)JS_IsFunction(context, obj));
+                    return 1;
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_IS_CONSTRUCTOR: {
+                if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
+                    JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
+                    results[0].set((bool)JS_IsConstructor(context, obj));
+                    return 1;
                 }
                 results[0].set("WrongArguments");
                 return -1;

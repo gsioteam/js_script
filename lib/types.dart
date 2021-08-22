@@ -14,7 +14,7 @@ class JsFunction<T> {
   JsFunction.sta(Function(List argv) func) :isStatic = true {
     function = (_, argv) => func(argv);
   }
-  /// New a instanc function
+  /// New a instance function
   JsFunction.ins(Function(T obj, List argv) func) : isStatic = false {
     function = (obj, argv) => func(obj!, argv);
   }
@@ -152,10 +152,11 @@ const int JS_ACTION_PROMISE_COMPLETE = 7;
 const int JS_ACTION_WRAP_FUNCTION = 8;
 const int JS_ACTION_CALL = 9;
 const int JS_ACTION_RUN = 10;
+const int JS_ACTION_RUN_PROMISE = 11;
 
-const int JS_ACTION_IS_ARRAY = 10;
-const int JS_ACTION_IS_FUNCTION = 11;
-const int JS_ACTION_IS_CONSTRUCTOR = 12;
+const int JS_ACTION_IS_ARRAY = 100;
+const int JS_ACTION_IS_FUNCTION = 101;
+const int JS_ACTION_IS_CONSTRUCTOR = 102;
 
 const int DART_ACTION_CONSTRUCTOR = 1;
 const int DART_ACTION_CALL = 2;

@@ -175,9 +175,12 @@ class JsValue {
   }
 
   Future get asFuture {
+    assert(!_disposed);
     Completer completer = Completer();
-    invoke("then", [script.function((argv) => completer.complete(argv[0]))]);
-    invoke("catch", [script.function((argv) => completer.completeError(argv[0]))]);
+    script._arguments[0].setValue(this);
+    script._arguments[1].setValue(script.function((argv) => completer.complete(argv[0])));
+    script._arguments[2].setValue(script.function((argv) => completer.completeError(argv[0])));
+    script._action(JS_ACTION_RUN_PROMISE, 3);
     return completer.future;
   }
 
@@ -779,7 +782,6 @@ extension JsArguemntExtension on JsArgument {
         return JsValue._class(script, ptrValue, classInfo.clazz.type);
       }
       case ARG_TYPE_DART_OBJECT:
-        // TODO wrong!
         return JsValue._instance(script, ptrValue, script._instances[ptrValue]);
     }
   }

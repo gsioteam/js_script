@@ -113,7 +113,7 @@
 #include <errno.h>
 #endif
 
-#if 1
+#if 0
 #define printf JS_Log
 #endif
 
