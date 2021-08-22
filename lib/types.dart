@@ -10,9 +10,11 @@ class JsFunction<T> {
   final bool isStatic;
   late CallFunction<T> function;
 
+  /// New a static function
   JsFunction.sta(Function(List argv) func) :isStatic = true {
     function = (_, argv) => func(argv);
   }
+  /// New a instanc function
   JsFunction.ins(Function(T obj, List argv) func) : isStatic = false {
     function = (obj, argv) => func(obj!, argv);
   }
@@ -23,7 +25,7 @@ class JsField<T, V> {
   final CallFunction<T>? getter;
   final CallFunction<T>? setter;
 
-
+  /// New a static field
   JsField.sta({
     V Function()? get,
     Function(V)? set,
@@ -32,6 +34,7 @@ class JsField<T, V> {
         getter = (get == null ? null : (_, __) => get()),
         setter = (set == null ? null : (_, argv) => set(argv[0]));
 
+  /// New a instance field
   JsField.ins({
     V Function(T)? get,
     Function(T, V)? set,

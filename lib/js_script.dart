@@ -31,18 +31,21 @@ class JsValue {
   JsValueType type;
   final dynamic dartObject;
 
+  // New a pure JS object
   JsValue._js(this.script, this._ptr) : type = JsValueType.JsObject, dartObject = null {
     script._cache.add(this);
     _retainCount = 1;
     delayRelease();
   }
 
+  // New a JS object and bind with a dart object.
   JsValue._instance(this.script, this._ptr, this.dartObject) : type = JsValueType.DartInstance {
     script._cache.add(this);
     _retainCount = 1;
     delayRelease();
   }
 
+  // New a JS object and bind with a dart type.
   JsValue._class(this.script, this._ptr, this.dartObject) : type = JsValueType.DartClass {
     script._cache.add(this);
     _retainCount = 1;
@@ -57,10 +60,12 @@ class JsValue {
     _disposed = true;
   }
 
+  // retain count +1
   int retain() {
     return ++_retainCount;
   }
 
+  // retain count -1 when retain count <= 0 dispose this object.
   int release() {
     if (--_retainCount <= 0) {
       if (!_disposed)
@@ -69,6 +74,7 @@ class JsValue {
     return _retainCount;
   }
 
+  // release this after 30ms.
   void delayRelease() {
     Future.delayed(Duration(milliseconds: 30), () {
       release();
@@ -80,6 +86,12 @@ class JsValue {
     _disposed = true;
   }
 
+  /// Set property to this JS object.
+  ///
+  /// The [key] would be a String or int value
+  ///
+  /// The [value] could be one of [int], [double], [bool],
+  /// [String], [Future] and [JsValue]
   void set(dynamic key, dynamic value) {
     assert(!_disposed);
     script._arguments[0].setValue(this);
@@ -94,6 +106,10 @@ class JsValue {
     script._action(JS_ACTION_SET, 3);
   }
 
+  /// Get a property of this JS object.
+  ///
+  /// The result could be one of [int], [double], [bool],
+  /// [String] and [JsValue]
   dynamic get(dynamic key) {
     assert(!_disposed);
     script._arguments[0].setValue(this);
@@ -110,6 +126,7 @@ class JsValue {
   operator[]= (dynamic key, dynamic value) => set(key, value);
   operator[] (dynamic key) => get(key);
 
+  /// Invoke a property function.
   dynamic invoke(String name, [List argv = const [],]) {
     assert(!_disposed);
     int len = argv.length;
@@ -126,6 +143,7 @@ class JsValue {
             (results, length) => results[0].get(script));
   }
 
+  /// Call as a JS function object.
   dynamic call([List argv = const []]) {
     assert(!_disposed);
     int len = argv.length;
@@ -268,6 +286,7 @@ class JsScript {
   List<_ClassInfo> _classList = [];
   Map<Type, _ClassInfo> _classIndex = {};
 
+  /// Define a bound class in the JS context.
   void addClass(ClassInfo clazz) {
     int index = _classList.length;
     var jsClass = clazz.createJsClass();
@@ -278,6 +297,7 @@ class JsScript {
     _classIndex[clazz.type] = classIndex;
   }
 
+  /// Shutdown this JS context.
   void dispose() {
     for (var promise in _cachePromises) {
       _arguments[0].type = ARG_TYPE_PROMISE;
@@ -305,6 +325,10 @@ class JsScript {
     return _action(JS_ACTION_EVAL, 2, (results, length) => results[0].get(this));
   }
 
+  /// Run a JS script which would be find from [fileSystems], and
+  /// the script would be treat as a module.
+  ///
+  /// The result is the default module exports.
   run(String filepath) {
     String? path = _findPath("/", filepath);
     if (path != null) {
@@ -580,6 +604,7 @@ class JsScript {
     }
   }
 
+  /// Establish a binding relationship between dart and js object
   JsValue bind(dynamic object, {
     ClassInfo? classInfo,
     JsValue? classFunc
@@ -641,6 +666,7 @@ class JsScript {
     return promise;
   }
 
+  /// Send a dart callback to JS context.
   JsValue function(Function(List argv) func) {
     return _action(JS_ACTION_WRAP_FUNCTION, 0, (results, len) {
       if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
