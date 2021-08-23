@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
 import 'types.dart';
@@ -108,7 +107,6 @@ abstract class JsValue {
   final dynamic dartObject;
   final JsValueType type;
 
-  @protected
   JsValue({
     required this.dartObject,
     required this.type,
