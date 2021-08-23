@@ -11,7 +11,7 @@ class IOFileSystem extends JsFileSystem {
   final Directory root;
 
   IOFileSystem(this.root, {
-    Directory? mount
+    String? mount
   }) : super(mount);
 
   @override
@@ -30,7 +30,7 @@ class IOFileSystem extends JsFileSystem {
 class MemoryFileSystem extends JsFileSystem {
   final Map<String, String> memory;
   MemoryFileSystem(this.memory, {
-    Directory? mount
+    String? mount
   }) : super(mount);
 
   @override
@@ -52,7 +52,7 @@ class AsarFileSystem extends JsFileSystem {
   late int contentOffset;
 
   AsarFileSystem(this.bytes, {
-    Directory? mount
+    String? mount
   }) : super(mount) {
     int tag = bytes.getUint32(0, Endian.little);
     if (tag == 4) {

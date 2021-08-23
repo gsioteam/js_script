@@ -1,3 +1,12 @@
+## 0.0.7
+
+- Added `web` support.
+
+## 0.0.6
+
+- Added `macos` support.
+- Added `linux` and `windows` but not tested. 
+
 ## 0.0.5
 
 - Added `newObject`

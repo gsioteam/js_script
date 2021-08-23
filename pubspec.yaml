@@ -1,6 +1,6 @@
 name: js_script
 description: Run JS script.
-version: 0.0.5
+version: 0.0.7
 homepage: https://github.com/gsioteam/js_script
 
 environment:
@@ -39,6 +39,9 @@ flutter:
         pluginClass: JsScriptPlugin
       windows:
         pluginClass: JsScriptPlugin
+      web:
+        pluginClass: JsScriptPlugin
+        fileName: js_script_web.dart
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

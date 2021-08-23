@@ -60,6 +60,9 @@ class _MyAppState extends State<MyApp> {
         })
       ]
     );
+
+    test("1 + 2 = 3", script.eval("1 + 2") == 3);
+
     var classInfo = ClassInfo<TestClass>(
       newInstance: (_) => TestClass(),
       fields: {
@@ -95,6 +98,8 @@ class _MyAppState extends State<MyApp> {
     {
       //Test function
       JsValue func = script.function((argv) => "hello" + argv[0]);
+      var obj = func.call(["world"]);
+      print(obj);
       test("[JS] call function", func.call(["world"]) == "helloworld");
     }
 

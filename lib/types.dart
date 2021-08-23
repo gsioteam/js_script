@@ -1,9 +1,4 @@
 
-import 'dart:ffi';
-
-import 'package:ffi/ffi.dart';
-import 'js_ffi.dart';
-
 typedef CallFunction<T> = Function(T? self, List argv);
 
 class JsFunction<T> {
@@ -108,30 +103,6 @@ class ClassInfo<T> {
     }
   }
 
-  Pointer<JsClass> createJsClass() {
-    Pointer<JsClass> jsClass = malloc.allocate(sizeOf<JsClass>());
-    jsClass.ref.name = name.toNativeUtf8();
-    int len = members.length;
-    jsClass.ref.membersLength = len;
-    jsClass.ref.members = malloc.allocate(len * sizeOf<JsMember>());
-    for (int i = 0; i < len; ++i) {
-      var member = jsClass.ref.members[i];
-      var memberInfo = members[i];
-      member.name = memberInfo.name.toNativeUtf8();
-      member.type = memberInfo.type;
-    }
-    return jsClass;
-  }
-
-  void deleteJsClass(Pointer<JsClass> jsClass) {
-    malloc.free(jsClass.ref.name);
-    for (int i = 0, t = jsClass.ref.membersLength; i < t; ++i) {
-      var member = jsClass.ref.members[i];
-      malloc.free(member.name);
-    }
-    malloc.free(jsClass.ref.members);
-    malloc.free(jsClass);
-  }
 }
 
 abstract class JsDispose {
@@ -141,42 +112,3 @@ abstract class JsDispose {
 
 
 const int MAX_ARGUMENTS = 16;
-
-const int JS_ACTION_EVAL = 1;
-const int JS_ACTION_TO_STRING = 2;
-const int JS_ACTION_SET = 3;
-const int JS_ACTION_GET = 4;
-const int JS_ACTION_INVOKE = 5;
-const int JS_ACTION_BIND = 6;
-const int JS_ACTION_PROMISE_COMPLETE = 7;
-const int JS_ACTION_WRAP_FUNCTION = 8;
-const int JS_ACTION_CALL = 9;
-const int JS_ACTION_RUN = 10;
-const int JS_ACTION_RUN_PROMISE = 11;
-const int JS_ACTION_PROPERTY_NAMES = 12;
-const int JS_ACTION_NEW_OBJECT = 13;
-
-const int JS_ACTION_IS_ARRAY = 100;
-const int JS_ACTION_IS_FUNCTION = 101;
-const int JS_ACTION_IS_CONSTRUCTOR = 102;
-
-const int DART_ACTION_CONSTRUCTOR = 1;
-const int DART_ACTION_CALL = 2;
-const int DART_ACTION_DELETE = 3;
-const int DART_ACTION_CALL_FUNCTION = 4;
-const int DART_ACTION_MODULE_NAME = 5;
-const int DART_ACTION_LOAD_MODULE = 6;
-
-const int ARG_TYPE_NULL = 0;
-const int ARG_TYPE_INT32 = 1;
-const int ARG_TYPE_INT64 = 2;
-const int ARG_TYPE_DOUBLE = 3;
-const int ARG_TYPE_BOOL = 4;
-const int ARG_TYPE_STRING = 5;
-const int ARG_TYPE_JS_STRING = 6;
-const int ARG_TYPE_JS_VALUE = 7;
-const int ARG_TYPE_DART_CLASS = 8;
-const int ARG_TYPE_DART_OBJECT = 9;
-const int ARG_TYPE_RAW_POINTER = 10;
-const int ARG_TYPE_PROMISE = 11;
-const int ARG_TYPE_MANAGED_VALUE = 12;
