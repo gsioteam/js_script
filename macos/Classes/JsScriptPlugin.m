@@ -13,7 +13,7 @@ void jsContextSetup();
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-  result(FlutterMethodNotImplemented);
+    result(FlutterMethodNotImplemented);
 }
 
 @end

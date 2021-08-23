@@ -178,9 +178,11 @@ class JsValue {
   Future get asFuture {
     assert(!_disposed);
     Completer completer = Completer();
+    JsValue resolve = script.function((argv) => completer.complete(argv[0]));
+    JsValue reject = script.function((argv) => completer.completeError(argv[0]));
     script._arguments[0].setValue(this);
-    script._arguments[1].setValue(script.function((argv) => completer.complete(argv[0])));
-    script._arguments[2].setValue(script.function((argv) => completer.completeError(argv[0])));
+    script._arguments[1].setValue(resolve);
+    script._arguments[2].setValue(reject);
     script._action(JS_ACTION_RUN_PROMISE, 3);
     return completer.future;
   }

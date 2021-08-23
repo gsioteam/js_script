@@ -33,6 +33,12 @@ flutter:
         pluginClass: JsScriptPlugin
       ios:
         pluginClass: JsScriptPlugin
+      linux:
+        pluginClass: JsScriptPlugin
+      macos:
+        pluginClass: JsScriptPlugin
+      windows:
+        pluginClass: JsScriptPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

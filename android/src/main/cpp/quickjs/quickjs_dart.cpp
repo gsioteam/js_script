@@ -1050,7 +1050,9 @@ public:
                     JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
                     JSPropertyEnum *propertyEnum = nullptr;
                     uint32_t length = 0;
-                    int ret = JS_GetOwnPropertyNames(context, &propertyEnum, &length, obj, JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
+                    int ret = JS_GetOwnPropertyNames(
+                            context, &propertyEnum, &length, obj,
+                            JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
                     if (ret < 0) {
                         JSValue ex = JS_GetException(context);
                         temp_string = errorString(ex);
@@ -1138,7 +1140,7 @@ public:
     }
 
     void* registerClass(JsClass *clazz, int id) {
-        JSClassID classId;
+        JSClassID classId = 0;
         classId = JS_NewClassID(&classId);
         JSClassDef def = {
                 .class_name = clazz->name,

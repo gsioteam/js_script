@@ -1,0 +1,22 @@
+PODS:
+  - FlutterMacOS (1.0.0)
+  - js_script (0.0.1):
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - js_script (from `Flutter/ephemeral/.symlinks/plugins/js_script/macos`)
+
+EXTERNAL SOURCES:
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  js_script:
+    :path: Flutter/ephemeral/.symlinks/plugins/js_script/macos
+
+SPEC CHECKSUMS:
+  FlutterMacOS: 57701585bf7de1b3fc2bb61f6378d73bbdea8424
+  js_script: 6f36e83c02cf8d89870471f086cc037a995744e5
+
+PODFILE CHECKSUM: 6eac6b3292e5142cfc23bdeb71848a40ec51c14c
+
+COCOAPODS: 1.10.2
