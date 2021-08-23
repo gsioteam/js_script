@@ -70,9 +70,9 @@ test("[Dart] obj.method() == 9", jsValue.dartObject.method() == 9);
 ```dart
 JsScript script = JsScript(
     fileSystems: [
-        // Added a asar file.
+        // Add a asar file.
         AsarFileSystem(await data),
-        // Added memory files.
+        // Add memory files.
         MemoryFileSystem({
             "/test.js": """
             const md5 = require('md5');
