@@ -30,8 +30,8 @@ class WebJsValue extends JsValue {
   dynamic call([List argv = const []]) => (_object as js.JsFunction).apply(argv);
 
   bool get isArray => _object is js.JsArray;
-  bool get isFunction => _object is JsFunction;
-  bool get isConstructor => _object is JsFunction;
+  bool get isFunction => _object is js.JsFunction;
+  bool get isConstructor => _object is js.JsFunction;
 
   Future get asFuture {
     Completer completer = Completer();
