@@ -112,26 +112,16 @@ abstract class JsValue {
     required this.type,
   });
 
-  void _dispose();
+  void onDispose();
 
   // retain count +1
-  int retain() => ++_retainCount;
+  int retain();
 
   // retain count -1 when retain count <= 0 dispose this object.
-  int release() {
-    if (--_retainCount <= 0) {
-      if (!_disposed)
-        _dispose();
-    }
-    return _retainCount;
-  }
+  int release();
 
   // release this after 30ms.
-  void delayRelease() {
-    Future.delayed(Duration(milliseconds: 30), () {
-      release();
-    });
-  }
+  void delayRelease();
 
   /// Set property to this JS object.
   ///

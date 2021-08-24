@@ -49,8 +49,8 @@ class WebJsValue extends JsValue {
       type: type
   );
 
-  void set(dynamic key, dynamic value) => _object[key] = wrap(value, script);
-  dynamic get(dynamic key) => jsValue(_object[key], script);
+  void set(dynamic key, dynamic value) => _object[key] = jsValue(value, script);
+  dynamic get(dynamic key) => wrap(_object[key], script);
 
   dynamic invoke(String name, [List argv = const [],]) {
     _object.callMethod(name, argv);
@@ -66,10 +66,10 @@ class WebJsValue extends JsValue {
     Completer completer = Completer();
     js.JsObject promise = script.resolve.apply([_object]);
     promise.callMethod("then", [js.JsFunction.withThis((self, value) {
-      completer.complete(jsValue(value, script));
+      completer.complete(wrap(value, script));
     })]);
     promise.callMethod("catch", [js.JsFunction.withThis((self, error) {
-      completer.completeError(jsValue(error, script));
+      completer.completeError(wrap(error, script));
     })]);
     return completer.future;
   }
@@ -80,6 +80,20 @@ class WebJsValue extends JsValue {
   }
 
   String toString() => _object.toString();
+
+  @override
+  void delayRelease() {
+  }
+
+  @override
+  void onDispose() {
+  }
+
+  @override
+  int release() => 1;
+
+  @override
+  int retain() => 1;
 }
 
 class _WebField {
@@ -215,12 +229,14 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
   js.JsFunction? _newPromise;
   js.JsObject newPromise(js.JsObject handler) {
     if (_newPromise == null) {
-      _newPromise = _eval.apply(["""(function(handler) {
-      return new Promise(function(resolve, reject) {
-        handler.resolve = resolve;
-        handler.reject = reject;
-      });
-  })"""]);
+      _newPromise = _eval.apply(["""
+      (function(handler) {
+        return new Promise(function(resolve, reject) {
+          handler.resolve = resolve;
+          handler.reject = reject;
+        });
+      })
+      """]);
     }
     return _newPromise!.apply([handler]);
   }

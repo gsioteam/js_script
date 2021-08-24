@@ -45,7 +45,7 @@ class IOJsValue extends JsValue {
   }
 
   int _retainCount = 0;
-  void _dispose() {
+  void onDispose() {
     assert(!_disposed);
     binder.releaseValue(script._context, _ptr);
     script._cache.remove(this);
@@ -61,7 +61,7 @@ class IOJsValue extends JsValue {
   int release() {
     if (--_retainCount <= 0) {
       if (!_disposed)
-        _dispose();
+        onDispose();
     }
     return _retainCount;
   }
