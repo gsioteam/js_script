@@ -28,13 +28,13 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Win32")
 endif()
 
 set(SRC 
-quickjs/quickjs_ext.c
-quickjs/quickjs_dart.cpp
-quickjs/libbf.c
-quickjs/qjscalc.c
-quickjs/libregexp.c
-quickjs/libunicode.c
-quickjs/cutils.c)
+quickjs_ext.c
+quickjs_dart.cpp
+libbf.c
+qjscalc.c
+libregexp.c
+libunicode.c
+cutils.c)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 add_executable(

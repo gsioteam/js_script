@@ -6,7 +6,7 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # not be changed
 set(PLUGIN_NAME "js_script_plugin")
 
-add_subdirectory(libs)
+add_subdirectory(quickjs)
 
 add_library(${PLUGIN_NAME} SHARED
   "js_script_plugin.cc"

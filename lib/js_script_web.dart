@@ -1,11 +1,40 @@
 
 import 'dart:async';
-import 'dart:html';
 import 'dart:js' as js;
 
-import 'package:path/path.dart' as path;
-
 import 'js_script.dart';
+
+wrap(dynamic value, WebJsScript script) {
+  if (value is js.JsObject) {
+    if (value[script.privateKey] != null) {
+      return WebJsValue(script, value,
+          type: JsValueType.DartInstance,
+          dartObject: value[script.privateKey]
+      );
+    } else if (value[script.classPrivateKey] != null) {
+      return WebJsValue(script, value,
+          type: JsValueType.DartClass,
+          dartObject: value[script.classPrivateKey].type
+      );
+    }
+    return WebJsValue(script, value);
+  } else {
+    return value;
+  }
+}
+
+jsValue(dynamic value, WebJsScript script) {
+  if (value is Future) {
+    js.JsObject handler = js.JsObject.jsify({});
+    value.then((value) => handler.callMethod("resolve", [jsValue(value, script)]));
+    value.catchError((error) => handler.callMethod("reject", [jsValue(error, script)]));
+    return script.newPromise(handler);
+  } else if (value is WebJsValue) {
+    return value._object;
+  } else {
+    return value;
+  }
+}
 
 class WebJsValue extends JsValue {
   js.JsObject _object;
@@ -20,8 +49,8 @@ class WebJsValue extends JsValue {
       type: type
   );
 
-  void set(dynamic key, dynamic value) => _object[key] = value;
-  dynamic get(dynamic key) => _object[key];
+  void set(dynamic key, dynamic value) => _object[key] = wrap(value, script);
+  dynamic get(dynamic key) => jsValue(_object[key], script);
 
   dynamic invoke(String name, [List argv = const [],]) {
     _object.callMethod(name, argv);
@@ -37,10 +66,10 @@ class WebJsValue extends JsValue {
     Completer completer = Completer();
     js.JsObject promise = script.resolve.apply([_object]);
     promise.callMethod("then", [js.JsFunction.withThis((self, value) {
-      completer.complete(value);
+      completer.complete(jsValue(value, script));
     })]);
     promise.callMethod("catch", [js.JsFunction.withThis((self, error) {
-      completer.completeError(error);
+      completer.completeError(jsValue(error, script));
     })]);
     return completer.future;
   }
@@ -88,7 +117,7 @@ class WebJsScript extends JsScript {
         var member = classInfo.members[method];
         List arr = [];
         for (var obj in args) {
-          arr.add(wrap(obj));
+          arr.add(wrap(obj, this));
         }
         var ret;
         if (member.type & MEMBER_STATIC != 0) {
@@ -96,7 +125,7 @@ class WebJsScript extends JsScript {
         } else {
           ret = member.call(self[privateKey], arr);
         }
-        return jsValue(ret);
+        return jsValue(ret, this);
       });
     }
     return _callFunction!;
@@ -176,7 +205,7 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
     }
     js.JsObject obj = js.JsObject(constructor, [privateKey]);
     obj[privateKey] = object;
-    return wrap(obj);
+    return wrap(obj, this);
   }
 
   @override
@@ -194,38 +223,6 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
   })"""]);
     }
     return _newPromise!.apply([handler]);
-  }
-
-  wrap(dynamic value) {
-    if (value is js.JsObject) {
-      if (value[privateKey] != null) {
-        return WebJsValue(this, value,
-          type: JsValueType.DartInstance,
-          dartObject: value[privateKey]
-        );
-      } else if (value[classPrivateKey] != null) {
-        return WebJsValue(this, value,
-          type: JsValueType.DartClass,
-          dartObject: value[classPrivateKey].type
-        );
-      }
-      return WebJsValue(this, value);
-    } else {
-      return value;
-    }
-  }
-
-  jsValue(dynamic value) {
-    if (value is Future) {
-      js.JsObject handler = js.JsObject.jsify({});
-      value.then((value) => handler.callMethod("resolve", [jsValue(value)]));
-      value.catchError((error) => handler.callMethod("reject", [jsValue(error)]));
-      return newPromise(handler);
-    } else if (value is WebJsValue) {
-      return value._object;
-    } else {
-      return value;
-    }
   }
 
   Map<String, dynamic> _requireCache = {};
@@ -261,7 +258,7 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
       return loadModule(filepath, filename);
     });
     global['require'] = require;
-    var ret = wrap(_eval.apply([script]));
+    var ret = wrap(_eval.apply([script]), this);
     // (global as WebJsValue)._object.deleteProperty('require');
     return ret;
   }
@@ -283,8 +280,8 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
         } else {
           argv = [];
         }
-        return jsValue(func(argv));
-      }));
+        return jsValue(func(argv), this);
+      }), this);
 
   JsValue? _global;
   @override
@@ -302,7 +299,7 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
     if (path != null) {
       String? code = fileSystems.loadCode(path);
       if (code != null) {
-        return wrap(runModule(code, path));
+        return wrap(runModule(code, path), this);
       }
     }
   }
