@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:js' as js;
 
+import 'common.dart';
 import 'js_script.dart';
 
 wrap(dynamic value, WebJsScript script) {
@@ -31,6 +32,13 @@ jsValue(dynamic value, WebJsScript script) {
     return script.newPromise(handler);
   } else if (value is WebJsValue) {
     return value._object;
+  } else if (value is Function) {
+    WebJsValue func = script.function((argv) => Function.apply(value, argv)) as WebJsValue;
+    return func._object;
+  } else if (value is Map || value is List) {
+    WebJsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass) as WebJsValue;
+    obj = script.wrap(obj) as WebJsValue;
+    return obj._object;
   } else {
     return value;
   }
@@ -56,7 +64,8 @@ class WebJsValue extends JsValue {
     _object.callMethod(name, argv);
   }
 
-  dynamic call([List argv = const []]) => (_object as js.JsFunction).apply(argv);
+  dynamic call([List argv = const []]) =>
+      wrap((_object as js.JsFunction).apply(argv.map((e) => jsValue(e, script)).toList()), script);
 
   bool get isArray => _object is js.JsArray;
   bool get isFunction => _object is js.JsFunction;
@@ -106,6 +115,12 @@ class WebJsScript extends JsScript {
   late js.JsFunction _eval;
   WebJsScript({fileSystems = const []}) : super.init(fileSystems: fileSystems) {
     _eval = js.context["eval"];
+    addClass(ClassInfo<Object>(
+      name: "DartObject",
+      newInstance: (argv) => Object(),
+    ));
+    addClass(mapClass);
+    addClass(listClass);
   }
 
   static js.JsFunction? _resolve;
@@ -130,8 +145,18 @@ class WebJsScript extends JsScript {
       _callFunction = js.JsFunction.withThis((js.JsObject self, ClassInfo classInfo, int method, List args) {
         var member = classInfo.members[method];
         List arr = [];
-        for (var obj in args) {
-          arr.add(wrap(obj, this));
+        var iter = args.iterator;
+        while (true) {
+          try {
+            if (iter.moveNext()) {
+              arr.add(wrap(iter.current, this));
+            } else {
+              break;
+            }
+          } catch (e) {
+            arr.add(null);
+            break;
+          }
         }
         var ret;
         if (member.type & MEMBER_STATIC != 0) {
@@ -273,7 +298,7 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
     js.JsFunction require = js.JsFunction.withThis((_, filename) {
       return loadModule(filepath, filename);
     });
-    global['require'] = require;
+    js.context['require'] = require;
     var ret = wrap(_eval.apply([script]), this);
     // (global as WebJsValue)._object.deleteProperty('require');
     return ret;
@@ -296,15 +321,8 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
         } else {
           argv = [];
         }
-        return jsValue(func(argv), this);
+        return jsValue(func(argv.map((e) => wrap(e, this)).toList()), this);
       }), this);
-
-  JsValue? _global;
-  @override
-  JsValue get global {
-    if (_global == null) _global = WebJsValue(this, js.context);
-    return _global!;
-  }
 
   @override
   JsValue newObject() => WebJsValue(this, js.JsObject.jsify({}));
@@ -318,6 +336,15 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
         return wrap(runModule(code, path), this);
       }
     }
+  }
+
+  JsValue? _global;
+  JsValue get global {
+    if (_global == null) {
+      _global = WebJsValue(this, js.context);
+      _global!.retain();
+    }
+    return _global!;
   }
 }
 

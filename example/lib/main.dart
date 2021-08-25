@@ -149,7 +149,7 @@ class _MyAppState extends State<MyApp> {
       """);
       test("[JS] test auto convert ", func.call([(content) {
         return content;
-      }, {"test": 1}]) == 1);
+      }, {"test": 26}]) == 26);
     }
 
     script.dispose();

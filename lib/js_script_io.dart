@@ -7,6 +7,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:js_script/types.dart';
 
+import 'common.dart';
 import 'js_ffi.dart';
 import 'js_script.dart';
 import 'package:path/path.dart' as path;
@@ -244,30 +245,6 @@ class _ClassInfo {
 
   _ClassInfo(this.clazz, this.index, this.ptr);
 }
-
-ClassInfo<Map> mapClass = ClassInfo<Map>(
-  name: "DartMap",
-  newInstance: (_) => {},
-  functions: {
-    "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
-    "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
-  }
-);
-
-ClassInfo<List> listClass = ClassInfo<List>(
-  name: "DartList",
-  newInstance: (_) => [],
-  functions: {
-    "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
-    "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
-  },
-  fields: {
-    "length": JsField.ins(
-      get: (obj) => obj.length,
-      set: (obj, argv) => obj.length = argv[0]
-    )
-  }
-);
 
 class IOJsScript extends JsScript {
   static HashMap<Pointer, IOJsScript> _index = HashMap();
@@ -633,32 +610,6 @@ class IOJsScript extends JsScript {
     return promise;
   }
 
-  JsValue? _wrapper;
-  JsValue _wrapCollection(JsValue value) {
-    if (_wrapper == null) {
-      _wrapper = eval("""
-(function() {
-    const handler = {
-        get: function(obj, prop) {
-            if (prop == 'length')
-                return obj.length;
-            return obj.get(prop);
-        },
-        set: function(obj, prop, value) {
-            if (prop == 'length')
-                obj.length = value;
-            obj.set(prop, value);
-        }
-    };
-    return function(target) {
-        return new Proxy(target, handler);
-    };
-})()
-      """);
-    }
-    return _wrapper!.call([value]);
-  }
-
   /// Send a dart callback to JS context.
   JsValue function(Function(List argv) func) {
     return _action(JS_ACTION_WRAP_FUNCTION, 0, block: (results, len) {
@@ -687,14 +638,6 @@ class IOJsScript extends JsScript {
     );
   }
 
-  JsValue? _global;
-  JsValue get global {
-    if (_global == null) {
-      _global = eval("global");
-      _global!.retain();
-    }
-    return _global!;
-  }
 }
 
 const int _Int32Max = 2147483647;
@@ -721,7 +664,7 @@ extension JsArguemntExtension on JsArgument {
       IOJsValue? val;
       reverse(script, () {
         JsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass);
-        val = script._wrapCollection(obj) as IOJsValue;
+        val = script.wrap(obj) as IOJsValue;
       });
       setValue(val!);
     } else if (value is Function) {
