@@ -126,7 +126,7 @@ abstract class JsValue {
   /// The [key] would be a String or int value
   ///
   /// The [value] could be one of [int], [double], [bool],
-  /// [String], [Future] and [JsValue]
+  /// [String], [Future] [JsValue] or any other type.
   void set(dynamic key, dynamic value);
 
   /// Get a property of this JS object.

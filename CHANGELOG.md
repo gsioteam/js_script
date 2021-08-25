@@ -1,3 +1,7 @@
+## 0.0.12
+
+- Any dart object could be sent to JS context. 
+
 ## 0.0.7
 
 - Added `web` support.
