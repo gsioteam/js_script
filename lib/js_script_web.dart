@@ -84,8 +84,8 @@ class WebJsValue extends JsValue {
   }
 
   List<String> getOwnPropertyNames() {
-    js.JsArray<String> arr = script.getPropertyNames.apply([_object]);
-    return arr.toList();
+    js.JsArray arr = script.getPropertyNames.apply([_object]);
+    return arr.toList().cast<String>();
   }
 
   String toString() => _object.toString();
