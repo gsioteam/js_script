@@ -141,6 +141,16 @@ class _MyAppState extends State<MyApp> {
       ret = script.run("test.js");
       test("[JS] run file in FileSystem", ret == '5d41402abc4b2a76b9719d911017c592');
     }
+    {
+      JsValue func = script.eval("""
+      (function (func, map) {
+        return func(map["test"])
+      })
+      """);
+      test("[JS] test auto convert ", func.call([(content) {
+        return content;
+      }, {"test": 1}]) == 1);
+    }
 
     script.dispose();
   }

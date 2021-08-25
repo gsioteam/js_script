@@ -4,6 +4,8 @@ import 'dart:collection';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:js_script/types.dart';
 
 import 'js_ffi.dart';
 import 'js_script.dart';
@@ -112,7 +114,7 @@ class IOJsValue extends JsValue {
     } else {
       throw Exception("key must be a String or int");
     }
-    return script._action(JS_ACTION_GET, 2, (results, length) => results[0].get(script));
+    return script._action(JS_ACTION_GET, 2, block: (results, length) => results[0].get(script));
   }
 
   operator[]= (dynamic key, dynamic value) => set(key, value);
@@ -132,7 +134,7 @@ class IOJsValue extends JsValue {
       script._arguments[i + 3].set(argv[i], script);
     }
     return script._action(JS_ACTION_INVOKE, 3 + len,
-            (results, length) => results[0].get(script));
+        block: (results, length) => results[0].get(script));
   }
 
   /// Call as a JS function object.
@@ -148,22 +150,23 @@ class IOJsValue extends JsValue {
       script._arguments[i + 2].set(argv[i], script);
     }
     return script._action(JS_ACTION_CALL, 2 + len,
-            (results, length) => results[0].get(script));
+        block: (results, length) => results[0].get(script)
+    );
   }
 
   bool get isArray {
     script._arguments[0].setValue(this);
-    return script._action(JS_ACTION_IS_ARRAY, 1, (results, length) => results[0].get(script));
+    return script._action(JS_ACTION_IS_ARRAY, 1, block: (results, length) => results[0].get(script));
   }
 
   bool get isFunction {
     script._arguments[0].setValue(this);
-    return script._action(JS_ACTION_IS_FUNCTION, 1, (results, length) => results[0].get(script));
+    return script._action(JS_ACTION_IS_FUNCTION, 1, block: (results, length) => results[0].get(script));
   }
 
   bool get isConstructor {
     script._arguments[0].setValue(this);
-    return script._action(JS_ACTION_IS_CONSTRUCTOR, 1, (results, length) => results[0].get(script));
+    return script._action(JS_ACTION_IS_CONSTRUCTOR, 1, block: (results, length) => results[0].get(script));
   }
 
   Future get asFuture {
@@ -181,7 +184,7 @@ class IOJsValue extends JsValue {
   List<String> getOwnPropertyNames() {
     assert(!_disposed);
     script._arguments[0].setValue(this);
-    return script._action(JS_ACTION_PROPERTY_NAMES, 1, (results, length) {
+    return script._action(JS_ACTION_PROPERTY_NAMES, 1, block: (results, length) {
       String ret = results[0].get(script);
       return ret.split(",");
     });
@@ -193,7 +196,7 @@ class IOJsValue extends JsValue {
       return "[Disposed JsValue]";
     } else {
       script._arguments[0].setValue(this);
-      return script._action(JS_ACTION_TO_STRING, 1, (results, length) {
+      return script._action(JS_ACTION_TO_STRING, 1, block: (results, length) {
         var arg = results[0];
         if (arg.type == ARG_TYPE_STRING) {
           String str = arg.get(script);
@@ -242,6 +245,30 @@ class _ClassInfo {
   _ClassInfo(this.clazz, this.index, this.ptr);
 }
 
+ClassInfo<Map> mapClass = ClassInfo<Map>(
+  name: "DartMap",
+  newInstance: (_) => {},
+  functions: {
+    "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
+    "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
+  }
+);
+
+ClassInfo<List> listClass = ClassInfo<List>(
+  name: "DartList",
+  newInstance: (_) => [],
+  functions: {
+    "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
+    "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
+  },
+  fields: {
+    "length": JsField.ins(
+      get: (obj) => obj.length,
+      set: (obj, argv) => obj.length = argv[0]
+    )
+  }
+);
+
 class IOJsScript extends JsScript {
   static HashMap<Pointer, IOJsScript> _index = HashMap();
 
@@ -285,6 +312,8 @@ class IOJsScript extends JsScript {
       name: "DartObject",
       newInstance: (argv) => Object(),
     ));
+    addClass(mapClass);
+    addClass(listClass);
   }
 
   List<_ClassInfo> _classList = [];
@@ -326,7 +355,7 @@ class IOJsScript extends JsScript {
   eval(String script, [String filepath = "<inline>"]) {
     _arguments[0].setString(script, this);
     _arguments[1].setString(filepath, this);
-    return _action(JS_ACTION_EVAL, 2, (results, length) => results[0].get(this));
+    return _action(JS_ACTION_EVAL, 2, block: (results, length) => results[0].get(this));
   }
 
   /// Run a JS script which would be find from [fileSystems], and
@@ -340,7 +369,7 @@ class IOJsScript extends JsScript {
       if (code != null) {
         _arguments[0].setString(code, this);
         _arguments[1].setString(path, this);
-        return _action(JS_ACTION_RUN, 2, (results, length) => results[0].get(this));
+        return _action(JS_ACTION_RUN, 2, block: (results, length) => results[0].get(this));
       }
     }
     throw Exception("File not found. $filepath");
@@ -355,7 +384,10 @@ class IOJsScript extends JsScript {
     _temp.clear();
   }
 
-  dynamic _action(int type, int argc, [Function(List<JsArgument> results, int length)? block]) {
+  /// If [reverse] is true, the arguments will reverse to the state before calling.
+  dynamic _action(int type, int argc, {
+    Function(List<JsArgument> results, int length)? block,
+  }) {
     int len = binder.action(_context, type, argc);
     _clearTemporary();
     if (len < 0) {
@@ -540,7 +572,7 @@ class IOJsScript extends JsScript {
   /// Establish a binding relationship between dart and js object
   JsValue bind(dynamic object, {
     ClassInfo? classInfo,
-    JsValue? classFunc
+    JsValue? classFunc,
   }) {
     if (object == null)
       throw Exception("Object is null");
@@ -562,16 +594,18 @@ class IOJsScript extends JsScript {
 
     _arguments[0].type = ARG_TYPE_MANAGED_VALUE;
     _arguments[0].ptrValue = classPtr;
-    return _action(JS_ACTION_BIND, 1, (results, len) {
-      if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
-        Pointer rawPtr = results[0].ptrValue;
-        _instances[rawPtr] = object;
-        var ptr = binder.retainValue(_context, rawPtr);
-        return IOJsValue._js(this, ptr.ref.ptrValue);
-      } else {
-        throw Exception("Wrong result");
-      }
-    });
+    return _action(JS_ACTION_BIND, 1,
+      block: (results, len) {
+        if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
+          Pointer rawPtr = results[0].ptrValue;
+          _instances[rawPtr] = object;
+          var ptr = binder.retainValue(_context, rawPtr);
+          return IOJsValue._js(this, ptr.ref.ptrValue);
+        } else {
+          throw Exception("Wrong result");
+        }
+      },
+    );
   }
 
   Pointer _newPromise(Future future) {
@@ -599,9 +633,35 @@ class IOJsScript extends JsScript {
     return promise;
   }
 
+  JsValue? _wrapper;
+  JsValue _wrapCollection(JsValue value) {
+    if (_wrapper == null) {
+      _wrapper = eval("""
+(function() {
+    const handler = {
+        get: function(obj, prop) {
+            if (prop == 'length')
+                return obj.length;
+            return obj.get(prop);
+        },
+        set: function(obj, prop, value) {
+            if (prop == 'length')
+                obj.length = value;
+            obj.set(prop, value);
+        }
+    };
+    return function(target) {
+        return new Proxy(target, handler);
+    };
+})()
+      """);
+    }
+    return _wrapper!.call([value]);
+  }
+
   /// Send a dart callback to JS context.
   JsValue function(Function(List argv) func) {
-    return _action(JS_ACTION_WRAP_FUNCTION, 0, (results, len) {
+    return _action(JS_ACTION_WRAP_FUNCTION, 0, block: (results, len) {
       if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
         Pointer rawPtr = results[0].ptrValue;
         _instances[rawPtr] = func;
@@ -614,15 +674,17 @@ class IOJsScript extends JsScript {
   }
 
   JsValue newObject() {
-    return _action(JS_ACTION_NEW_OBJECT, 0, (results, len) {
-      if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
-        Pointer rawPtr = results[0].ptrValue;
-        var ptr = binder.retainValue(_context, rawPtr);
-        return IOJsValue._js(this, ptr.ref.ptrValue);
-      } else {
-        throw Exception("Wrong result");
-      }
-    });
+    return _action(JS_ACTION_NEW_OBJECT, 0,
+      block: (results, len) {
+        if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
+          Pointer rawPtr = results[0].ptrValue;
+          var ptr = binder.retainValue(_context, rawPtr);
+          return IOJsValue._js(this, ptr.ref.ptrValue);
+        } else {
+          throw Exception("Wrong result");
+        }
+      },
+    );
   }
 
   JsValue? _global;
@@ -655,8 +717,36 @@ extension JsArguemntExtension on JsArgument {
       setValue(value);
     } else if (value is Future) {
       setFuture(value, script);
+    } else if (value is Map || value is List) {
+      IOJsValue? val;
+      reverse(script, () {
+        JsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass);
+        val = script._wrapCollection(obj) as IOJsValue;
+      });
+      setValue(val!);
+    } else if (value is Function) {
+      IOJsValue? val;
+      reverse(script, () {
+        val = script.function((argv) => Function.apply(value, argv)) as IOJsValue;
+      });
+      setValue(val!);
     } else {
-      throw Exception("Unkown type $value");
+      IOJsValue? val;
+      reverse(script, () {
+        var info = script._classIndex[value.runtimeType]?.clazz;
+        if (info == null) info = script._classList[0].clazz;
+        val = script.bind(value, classInfo: info) as IOJsValue;
+      });
+      setValue(val!);
+    }
+  }
+
+  void reverse(IOJsScript script, VoidCallback block) {
+    Pointer backup = binder.backup(script._context);
+    try {
+      block();
+    } finally {
+      binder.reverse(script._context, backup);
     }
   }
 

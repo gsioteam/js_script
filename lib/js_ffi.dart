@@ -18,6 +18,8 @@ typedef JsContextRegisterClassFunc = Pointer Function(Pointer context, Pointer<J
 typedef JsContextHasPendingJobFunc = Int32 Function(Pointer context);
 typedef JsContextExecutePendingJobFunc = Int32 Function(Pointer context);
 typedef JsContextNewPromiseFunc = Pointer Function(Pointer context);
+typedef JsContextBackupFunc = Pointer Function(Pointer context);
+typedef JsContextReverseFunc = Void Function(Pointer context, Pointer backup);
 
 typedef JsPrintHandlerFunc = Void Function(Int32 type, Pointer<Utf8> str);
 typedef JsToDartActionFunc = Int32 Function(Pointer context, Int32 type, Int32 argc);
@@ -79,9 +81,10 @@ class JsBinder {
   late JsContextNewPromiseFunc newPromise;
   late int Function(Pointer) hasPendingJob;
   late int Function(Pointer) executePendingJob;
+  late Pointer Function(Pointer) backup;
+  late void Function(Pointer, Pointer) reverse;
 
   JsBinder() {
-    print(Platform.isMacOS);
     setupJsContext = nativeGLib
         .lookup<NativeFunction<SetupJsContextFunc>>("setupJsContext").asFunction();
     deleteJsContext = nativeGLib
@@ -106,6 +109,10 @@ class JsBinder {
         .lookup<NativeFunction<JsContextHasPendingJobFunc>>("jsContextHasPendingJob").asFunction();
     executePendingJob = nativeGLib
         .lookup<NativeFunction<JsContextExecutePendingJobFunc>>("jsContextExecutePendingJob").asFunction();
+    backup = nativeGLib
+        .lookup<NativeFunction<JsContextBackupFunc>>("jsContextBackup").asFunction();
+    reverse = nativeGLib
+        .lookup<NativeFunction<JsContextReverseFunc>>("jsContextReverse").asFunction();
   }
 }
 

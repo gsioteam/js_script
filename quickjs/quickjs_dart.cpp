@@ -586,6 +586,7 @@ class JsContext {
     vector<JSValue> classVector;
     JSValue promise;
     JSValue promiseResolve;
+    stack<JsArgument *> backups;
 
 public:
     static JsContext *_temp;
@@ -607,6 +608,7 @@ public:
         context = JS_NewContext(runtime);
         JS_AddIntrinsicOperators(context);
         JS_AddIntrinsicRequire(context);
+        JS_AddIntrinsicProxy(context);
         JS_SetContextOpaque(context, this);
 
         private_key = JS_NewAtom(context, "_$tar");
@@ -664,6 +666,10 @@ public:
         JS_FreeRuntime(runtime);
         if (_temp == this)
             _temp = nullptr;
+        while (!backups.empty()) {
+            free(backups.top());
+            backups.pop();
+        }
     }
 
     static void printError(JsContext *that, JSValue value, const char *prefix) {
@@ -704,6 +710,23 @@ public:
             }
         }
         return ret;
+    }
+
+    JsArgument *backupArguments() {
+        JsArgument *res;
+        if (backups.empty()) {
+            res = (JsArgument *)malloc(sizeof(JsArgument) * handlers.maxArguments);
+        } else {
+            res = backups.top();
+            backups.pop();
+        }
+        memcpy(res, arguments, sizeof(JsArgument) * handlers.maxArguments);
+        return res;
+    }
+
+    void reverseArguments(JsArgument *backup) {
+        memcpy(arguments, backup, sizeof(JsArgument) * handlers.maxArguments);
+        backups.push(backup);
     }
 
     int action(int type, int argc) {
@@ -1348,6 +1371,14 @@ void deleteJsContext(JsContext *self) {
 
 int jsContextAction(JsContext *self, int type, int argc) {
     return self->action(type, argc);
+}
+
+JsArgument *jsContextBackup(JsContext *self) {
+    return self->backupArguments();
+}
+
+void jsContextReverse(JsContext *self, JsArgument *backup) {
+    self->reverseArguments(backup);
 }
 
 const char *jsContextToStringPtr(JsContext *that, void *p) {
