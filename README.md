@@ -85,3 +85,18 @@ var ret = script.run("test.js");
 ```
 
 For supporting npm pack, you can import it via a [asar file](https://github.com/electron/asar).
+
+### Auto convert
+
+Any dart object could be auto convert to JS object. 
+
+```dart
+JsValue func = script.eval("""
+(function (func, map) {
+    return func(map["test"])
+})
+""");
+test("[JS] test auto convert ", func.call([(content) {
+    return content;
+}, {"test": 26}]) == 26);
+```
