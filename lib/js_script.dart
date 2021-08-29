@@ -206,30 +206,4 @@ abstract class JsScript {
     }
     return _global!;
   }
-
-  JsValue? _wrapper;
-  JsValue wrap(JsValue value) {
-    if (_wrapper == null) {
-      _wrapper = eval("""
-(function() {
-    const handler = {
-        get: function(obj, prop) {
-            if (prop == 'length')
-                return obj.length;
-            return obj.get(prop);
-        },
-        set: function(obj, prop, value) {
-            if (prop == 'length')
-                obj.length = value;
-            obj.set(prop, value);
-        }
-    };
-    return function(target) {
-        return new Proxy(target, handler);
-    };
-})()
-      """);
-    }
-    return _wrapper!.call([value]);
-  }
 }

@@ -321,6 +321,7 @@ class IOJsScript extends JsScript {
     }
     _cache.clear();
     _clearTemporary();
+    _wrapper?.release();
     binder.clearCache(_context);
     binder.deleteJsContext(_context);
     _index.remove(_context);
@@ -638,6 +639,33 @@ class IOJsScript extends JsScript {
     );
   }
 
+
+  JsValue? _wrapper;
+  JsValue collectionWrap(JsValue value) {
+    if (_wrapper == null) {
+      _wrapper = eval("""
+(function() {
+    const handler = {
+        get: function(obj, prop) {
+            if (prop == 'length')
+                return obj.length;
+            return obj.get(prop);
+        },
+        set: function(obj, prop, value) {
+            if (prop == 'length')
+                obj.length = value;
+            obj.set(prop, value);
+        }
+    };
+    return function(target) {
+        return new Proxy(target, handler);
+    };
+})()
+      """);
+      _wrapper!.retain();
+    }
+    return _wrapper!.call([value]);
+  }
 }
 
 const int _Int32Max = 2147483647;
@@ -664,7 +692,7 @@ extension JsArguemntExtension on JsArgument {
       IOJsValue? val;
       reverse(script, () {
         JsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass);
-        val = script.wrap(obj) as IOJsValue;
+        val = script.collectionWrap(obj) as IOJsValue;
       });
       setValue(val!);
     } else if (value is Function) {

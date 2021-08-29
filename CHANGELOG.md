@@ -1,3 +1,7 @@
+## 0.0.14
+
+- Fixed a bug that the collection Proxy is forgotten to be retain.
+
 ## 0.0.12
 
 - Any dart object could be sent to JS context. 

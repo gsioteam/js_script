@@ -37,7 +37,7 @@ jsValue(dynamic value, WebJsScript script) {
     return func._object;
   } else if (value is Map || value is List) {
     WebJsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass) as WebJsValue;
-    obj = script.wrap(obj) as WebJsValue;
+    obj = script.collectionWrap(obj) as WebJsValue;
     return obj._object;
   } else {
     return value;
@@ -345,6 +345,32 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
       _global!.retain();
     }
     return _global!;
+  }
+
+  JsValue? _wrapper;
+  JsValue collectionWrap(JsValue value) {
+    if (_wrapper == null) {
+      _wrapper = eval("""
+(function() {
+    const handler = {
+        get: function(obj, prop) {
+            if (prop == 'length')
+                return obj.length;
+            return obj.get(prop);
+        },
+        set: function(obj, prop, value) {
+            if (prop == 'length')
+                obj.length = value;
+            obj.set(prop, value);
+        }
+    };
+    return function(target) {
+        return new Proxy(target, handler);
+    };
+})()
+      """);
+    }
+    return _wrapper!.call([value]);
   }
 }
 
