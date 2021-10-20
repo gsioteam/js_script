@@ -767,9 +767,9 @@ public:
             }
             case JS_ACTION_SET: {
                 if (argc == 3 &&
-                arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                        (arguments[1].type == ARG_TYPE_STRING ||
-                        arguments[1].type == ARG_TYPE_INT32)) {
+                    arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
+                    (arguments[1].type == ARG_TYPE_STRING ||
+                    arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
                     JSValue val = getArgument(arguments[2]);
 

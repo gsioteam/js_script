@@ -278,6 +278,7 @@ class IOJsScript extends JsScript {
     for (int i = 0; i < maxArguments; ++i) {
       _results.add(_rawResults[i]);
     }
+
     Pointer<JsHandlers> handlers = malloc.allocate(sizeOf<JsHandlers>());
     handlers.ref.maxArguments = maxArguments;
     handlers.ref.print = _printHandlerPtr;
@@ -362,12 +363,21 @@ class IOJsScript extends JsScript {
     _temp.clear();
   }
 
-  /// If [reverse] is true, the arguments will reverse to the state before calling.
+  bool _waitForClear = false;
+  void _needClearTemporary() {
+    if (_waitForClear) return;
+    _waitForClear = true;
+    Future.delayed(Duration(milliseconds: 0)).then((value) {
+      _clearTemporary();
+      _waitForClear = false;
+    });
+  }
+
   dynamic _action(int type, int argc, {
     Function(List<JsArgument> results, int length)? block,
   }) {
     int len = binder.action(_context, type, argc);
-    _clearTemporary();
+    _needClearTemporary();
     if (len < 0) {
       throw Exception(_results[0].get(this));
     }
@@ -439,7 +449,9 @@ class IOJsScript extends JsScript {
                 return -1;
               }
             } else {
-              _tempArgv.length = argc - 2;
+              int len = argc - 2;
+              if (len != _tempArgv.length)
+                _tempArgv.length = len;
               for (int i = 0, t = _tempArgv.length; i < t; ++i) {
                 _tempArgv[i] = _arguments[2 + i].get(this);
               }

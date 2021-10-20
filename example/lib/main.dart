@@ -73,6 +73,7 @@ class _MyAppState extends State<MyApp> {
       },
       functions: {
         "method": JsFunction.ins((obj, argv) => obj.method()),
+        "method2": JsFunction.sta((argv) => 3),
         "wait": JsFunction.ins((obj, argv) => obj.wait(argv[0])),
       }
     );
@@ -117,19 +118,19 @@ class _MyAppState extends State<MyApp> {
 
     {
       JsValue main = script.eval("""
-      function main() {
+      (function () {
         let ret = 0;
-        for (let i = 0; i < 100000; ++i) {
+        for (let i = 0; i < 1000000; ++i) {
           ret += obj.method();
         }
         return ret;
-      };
-      main
+      });
       """);
 
       var time = DateTime.now();
       var res = main.call();
-      test("[JS] call dart method 100000 times, using ${DateTime.now().difference(time).inMilliseconds}ms", res == 900000);
+      test("[JS] call dart method 1000000 times, using ${DateTime.now().difference(time).inMilliseconds}ms", res == 9000000);
+
     }
 
     {

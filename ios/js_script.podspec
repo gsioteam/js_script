@@ -21,8 +21,9 @@ Run JS script.
     'Classes/quickjs/libregexp.c',
     'Classes/quickjs/libunicode.c',
     'Classes/quickjs/cutils.c',
-    # Be free to test jscore code, but it is too slow than quickjs. 
+    # This is jscore code, but it is too slow than quickjs. 
     # 'Classes/jscore/jscore_dart.mm',
+    'Classes/JsScriptPlugin.h',
     'Classes/JsScriptPlugin.m',
   ]
   s.public_header_files = 'Classes/JsScriptPlugin.h'
