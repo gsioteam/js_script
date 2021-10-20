@@ -374,6 +374,11 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
     }
     return _wrapper!.call([value]);
   }
+
+  @override
+  JsBuffer newBuffer(int length) {
+    throw UnimplementedError();
+  }
 }
 
 class JsScriptPlugin {

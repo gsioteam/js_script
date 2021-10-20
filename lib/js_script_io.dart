@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/cupertino.dart';
@@ -244,6 +245,37 @@ class _ClassInfo {
   Pointer ptr;
 
   _ClassInfo(this.clazz, this.index, this.ptr);
+}
+
+class IOJsBuffer extends JsBuffer {
+  IOJsScript script;
+  late Pointer<Uint8> memory;
+
+  late JsValue value;
+
+  IOJsBuffer(this.script, int length) : super(length) {
+    memory = malloc.allocate(length);
+
+    script._arguments[0].setInt(length);
+    script._arguments[1].type = ARG_TYPE_RAW_POINTER;
+    script._arguments[1].ptrValue = memory;
+    value = script._action(JS_ACTION_NEW_ARRAYBUFFER, 2, block: (results, len) {
+      if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
+        Pointer rawPtr = results[0].ptrValue;
+        var ptr = binder.retainValue(script._context, rawPtr);
+        return IOJsValue._js(script, ptr.ref.ptrValue);
+      } else {
+        throw Exception("Wrong result");
+      }
+    });
+  }
+
+  @override
+  void fill(Uint8List buffer, int offset) {
+    var buffer = memory.asTypedList(length);
+    buffer.setRange(offset, offset + buffer.length, buffer);
+  }
+
 }
 
 class IOJsScript extends JsScript {
@@ -651,7 +683,6 @@ class IOJsScript extends JsScript {
     );
   }
 
-
   JsValue? _wrapper;
   JsValue collectionWrap(JsValue value) {
     if (_wrapper == null) {
@@ -677,6 +708,12 @@ class IOJsScript extends JsScript {
       _wrapper!.retain();
     }
     return _wrapper!.call([value]);
+  }
+
+  @override
+  JsBuffer newBuffer(int length) {
+    // TODO: implement newBuffer
+    throw UnimplementedError();
   }
 }
 
@@ -804,6 +841,7 @@ extension JsArguemntExtension on JsArgument {
   }
 
   bool get isInt => type == ARG_TYPE_INT32 || type == ARG_TYPE_INT64;
+
 }
 
 JsScript scriptFactory({

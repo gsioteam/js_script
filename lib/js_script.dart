@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as path;
 
@@ -28,6 +29,15 @@ abstract class JsFileSystem {
 
   bool exist(String filename);
   String? read(String filename);
+}
+
+abstract class JsBuffer with JsProxy {
+  int length;
+
+  JsBuffer(this.length);
+
+  void fill(Uint8List buffer, int offset);
+
 }
 
 extension JsFileSystemList on List<JsFileSystem> {
@@ -201,6 +211,8 @@ abstract class JsScript {
   JsValue function(Function(List argv) func);
 
   JsValue newObject();
+
+  JsBuffer newBuffer(int length);
 
   JsValue? _global;
   JsValue get global {
