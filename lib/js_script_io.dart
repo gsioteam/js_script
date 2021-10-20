@@ -711,10 +711,7 @@ class IOJsScript extends JsScript {
   }
 
   @override
-  JsBuffer newBuffer(int length) {
-    // TODO: implement newBuffer
-    throw UnimplementedError();
-  }
+  JsBuffer newBuffer(int length) => IOJsBuffer(this, length);
 }
 
 const int _Int32Max = 2147483647;
