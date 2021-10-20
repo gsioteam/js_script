@@ -288,7 +288,7 @@ class IOJsScript extends JsScript {
     malloc.free(handlers);
     addClass(ClassInfo<Object>(
       name: "DartObject",
-      newInstance: (argv) => Object(),
+      newInstance: (_, argv) => Object(),
     ));
     addClass(mapClass);
     addClass(listClass);
@@ -417,7 +417,7 @@ class IOJsScript extends JsScript {
             for (int i = 0, t = _tempArgv.length; i < t; ++i) {
               _tempArgv[i] = _arguments[2 + i].get(this);
             }
-            var ins = clazz.members[0].call(null, _tempArgv);
+            var ins = clazz.members[0].call(this, _tempArgv);
             _instances[ptr] = ins;
             return 0;
           } else {
@@ -700,6 +700,8 @@ extension JsArguemntExtension on JsArgument {
       setValue(value);
     } else if (value is Future) {
       setFuture(value, script);
+    } else if (value is JsProxy) {
+      setValue(value.value as IOJsValue);
     } else if (value is Map || value is List) {
       IOJsValue? val;
       reverse(script, () {

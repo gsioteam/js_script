@@ -17,6 +17,10 @@ enum JsValueType {
   DartClass
 }
 
+abstract class JsProxy {
+  JsValue get value;
+}
+
 abstract class JsFileSystem {
   final String? mount;
   JsFileSystem([String? mount]) :

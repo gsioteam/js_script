@@ -117,7 +117,7 @@ class WebJsScript extends JsScript {
     _eval = js.context["eval"];
     addClass(ClassInfo<Object>(
       name: "DartObject",
-      newInstance: (argv) => Object(),
+      newInstance: (_, argv) => Object(),
     ));
     addClass(mapClass);
     addClass(listClass);
@@ -159,7 +159,9 @@ class WebJsScript extends JsScript {
           }
         }
         var ret;
-        if (member.type & MEMBER_STATIC != 0) {
+        if (method == 0) {
+          ret = member.call(this, arr);
+        } else if (member.type & MEMBER_STATIC != 0) {
           ret = member.call(null, arr);
         } else {
           ret = member.call(self[privateKey], arr);

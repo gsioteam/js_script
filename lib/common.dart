@@ -3,7 +3,7 @@ import 'package:js_script/types.dart';
 
 ClassInfo<Map> mapClass = ClassInfo<Map>(
     name: "DartMap",
-    newInstance: (_) => {},
+    newInstance: (_,__) => {},
     functions: {
       "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
       "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
@@ -17,7 +17,7 @@ ClassInfo<Map> mapClass = ClassInfo<Map>(
 
 ClassInfo<List> listClass = ClassInfo<List>(
     name: "DartList",
-    newInstance: (_) => [],
+    newInstance: (_,__) => [],
     functions: {
       "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
       "get": JsFunction.ins((obj, argv) => obj[argv[0]]),

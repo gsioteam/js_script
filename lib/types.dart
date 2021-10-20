@@ -1,9 +1,11 @@
 
+import 'package:js_script/js_script.dart';
+
 typedef CallFunction<T> = Function(T? self, List argv);
 
 class JsFunction<T> {
   final bool isStatic;
-  late CallFunction<T> function;
+  late CallFunction<dynamic> function;
 
   /// New a static function
   JsFunction.sta(Function(List argv) func) :isStatic = true {
@@ -17,8 +19,8 @@ class JsFunction<T> {
 
 class JsField<T, V> {
   bool isStatic;
-  final CallFunction<T>? getter;
-  final CallFunction<T>? setter;
+  final CallFunction<dynamic>? getter;
+  final CallFunction<dynamic>? setter;
 
   /// New a static field
   JsField.sta({
@@ -48,11 +50,11 @@ const int MEMBER_STATIC       = 1 << 4;
 class _MemberInfo<T> {
   String name;
   int type;
-  CallFunction<T> func;
+  CallFunction<dynamic> func;
 
   _MemberInfo(this.name, this.type, this.func);
 
-  dynamic call(T? obj, List argv) => func(obj, argv);
+  dynamic call(dynamic obj, List argv) => func(obj, argv);
 }
 
 class ClassInfo<T> {
@@ -62,14 +64,14 @@ class ClassInfo<T> {
 
   ClassInfo({
     String? name,
-    required T Function(List argv) newInstance,
+    required T Function(JsScript, List argv) newInstance,
     Map<String, JsFunction<T>> functions = const {},
     Map<String, JsField<T, dynamic>> fields = const {},
   }) : type = T, name = name == null ? T.toString() : name {
     members.add(_MemberInfo<T>(
         this.name,
         MEMBER_CONSTRUCTOR,
-        (_, argv) => newInstance(argv)
+        (script, argv) => newInstance(script, argv)
     ));
     functions.forEach((name, func) {
       members.add(_MemberInfo<T>(

@@ -64,7 +64,7 @@ class _MyAppState extends State<MyApp> {
     test("1 + 2 = 3", script.eval("1 + 2") == 3);
 
     var classInfo = ClassInfo<TestClass>(
-      newInstance: (_) => TestClass(),
+      newInstance: (_, __) => TestClass(),
       fields: {
         "field": JsField.ins(
           get: (obj) => obj.field,
