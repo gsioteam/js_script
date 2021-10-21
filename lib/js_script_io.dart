@@ -272,8 +272,8 @@ class IOJsBuffer extends JsBuffer {
 
   @override
   void fill(Uint8List buffer, int offset) {
-    var buffer = memory.asTypedList(length);
-    buffer.setRange(offset, offset + buffer.length, buffer);
+    var memBuffer = memory.asTypedList(length);
+    memBuffer.setRange(offset, offset + buffer.length, buffer);
   }
 
 }

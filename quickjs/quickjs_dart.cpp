@@ -782,7 +782,7 @@ public:
                         atom = JS_NewAtomUInt32(context, arguments[1].intValue);
                     }
 
-                    bool res = JS_SetProperty(context, value, atom, val) == TRUE;
+                    bool res = JS_SetProperty(context, value, atom, JS_DupValue(context, val)) == TRUE;
                     JS_FreeAtom(context, atom);
 
                     if (res) {
