@@ -40,6 +40,7 @@ const int JS_ACTION_RUN = 10;
 const int JS_ACTION_RUN_PROMISE = 11;
 const int JS_ACTION_PROPERTY_NAMES = 12;
 const int JS_ACTION_NEW_OBJECT = 13;
+const int JS_ACTION_NEW_ARRAYBUFFER = 14;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;
@@ -86,7 +87,7 @@ struct JsHandlers {
 struct JsArgument {
     short type;
     int64_t intValue;
-    double_t doubleValue;
+    double doubleValue;
     void *ptrValue;
 
     void setNull() {
@@ -767,9 +768,9 @@ public:
             }
             case JS_ACTION_SET: {
                 if (argc == 3 &&
-                    arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
-                    (arguments[1].type == ARG_TYPE_STRING ||
-                    arguments[1].type == ARG_TYPE_INT32)) {
+                arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
+                        (arguments[1].type == ARG_TYPE_STRING ||
+                        arguments[1].type == ARG_TYPE_INT32)) {
                     JSValue value = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
                     JSValue val = getArgument(arguments[2]);
 
@@ -781,7 +782,7 @@ public:
                         atom = JS_NewAtomUInt32(context, arguments[1].intValue);
                     }
 
-                    bool res = JS_SetProperty(context, value, atom, val) == TRUE;
+                    bool res = JS_SetProperty(context, value, atom, JS_DupValue(context, val)) == TRUE;
                     JS_FreeAtom(context, atom);
 
                     if (res) {
@@ -1104,6 +1105,27 @@ public:
                 temp_results.push_back(obj);
                 return 1;
             }
+            case JS_ACTION_NEW_ARRAYBUFFER: {
+                if (argc == 2 &&
+                (arguments[0].type == ARG_TYPE_INT32 ||
+                arguments[0].type == ARG_TYPE_INT64) &&
+                arguments[1].type == ARG_TYPE_RAW_POINTER) {
+                    size_t len = arguments[0].intValue;
+                    uint8_t* buf = (uint8_t*)arguments[1].ptrValue;
+                    JSValue obj = JS_NewArrayBuffer(
+                            context,
+                            buf,
+                            len,
+                            freeArrayBufferData,
+                            buf,
+                            false);
+                    results[0].setPointer(JS_VALUE_GET_PTR(obj));
+                    temp_results.push_back(obj);
+                    return 1;
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
             case JS_ACTION_IS_ARRAY: {
                 if (argc == 1 && arguments[0].type == ARG_TYPE_MANAGED_VALUE) {
                     JSValue obj = JS_MKPTR(JS_TAG_OBJECT, arguments[0].ptrValue);
@@ -1160,6 +1182,11 @@ public:
             tempArgument.ptrValue = JS_VALUE_GET_PTR(value);
         }
         return &tempArgument;
+    }
+
+    static void freeArrayBufferData(JSRuntime *rt, void *opaque, void *ptr) {
+        uint8_t *buf = (uint8_t *)opaque;
+        delete buf;
     }
 
     void* registerClass(JsClass *clazz, int id) {
