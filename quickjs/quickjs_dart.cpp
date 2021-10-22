@@ -87,7 +87,7 @@ struct JsHandlers {
 struct JsArgument {
     short type;
     int64_t intValue;
-    double_t doubleValue;
+    double doubleValue;
     void *ptrValue;
 
     void setNull() {
