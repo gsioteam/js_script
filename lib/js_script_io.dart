@@ -235,6 +235,18 @@ int _toDartHandler(Pointer context, int type, int argc) {
   return -2;
 }
 
+class IOJsCompiled extends JsCompiled {
+  Pointer pointer;
+  int length;
+
+  IOJsCompiled(this.pointer, this.length);
+
+  @override
+  void dispose() {
+    malloc.free(pointer);
+  }
+}
+
 const int _Result = -2;
 Pointer<NativeFunction<JsPrintHandlerFunc>> _printHandlerPtr = Pointer.fromFunction(_printHandler);
 Pointer<NativeFunction<JsToDartActionFunc>> _toDartHandlerPtr = Pointer.fromFunction(_toDartHandler, _Result);
@@ -712,6 +724,30 @@ class IOJsScript extends JsScript {
 
   @override
   JsBuffer newBuffer(int length) => IOJsBuffer(this, length);
+
+  JsCompiled compile(String script, [String filepath = "<inline>"]) {
+    _arguments[0].setString(script, this);
+    _arguments[1].setString(filepath, this);
+    return _action(JS_ACTION_COMPILE, 2, block: (results, length) {
+      if (length == 2 &&
+          results[0].isInt &&
+          results[1].type == ARG_TYPE_RAW_POINTER) {
+        int len = results[0].intValue;
+        Pointer pointer = results[1].ptrValue;
+        return IOJsCompiled(pointer, len);
+      } else {
+        throw Exception("Wrong result");
+      }
+    });
+  }
+  void loadCompiled(JsCompiled compiled) {
+    if (compiled is IOJsCompiled) {
+      _arguments[0].ptrValue = compiled.pointer;
+      _arguments[0].type = ARG_TYPE_RAW_POINTER;
+      _arguments[1].setInt(compiled.length);
+      return _action(JS_ACTION_LOAD_COMPILED, 2);
+    }
+  }
 }
 
 const int _Int32Max = 2147483647;

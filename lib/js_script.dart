@@ -172,6 +172,10 @@ abstract class JsValue {
   String toString();
 }
 
+abstract class JsCompiled {
+  void dispose();
+}
+
 abstract class JsScript {
   final List<JsFileSystem> fileSystems;
 
@@ -213,6 +217,9 @@ abstract class JsScript {
   JsValue newObject();
 
   JsBuffer newBuffer(int length);
+
+  JsCompiled compile(String script, [String filepath = "<inline>"]);
+  void loadCompiled(JsCompiled compiled);
 
   JsValue? _global;
   JsValue get global {

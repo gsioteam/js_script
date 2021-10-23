@@ -379,6 +379,12 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
   JsBuffer newBuffer(int length) {
     throw UnimplementedError();
   }
+  JsCompiled compile(String script, [String filepath = "<inline>"]) {
+    throw Exception("NotImplemented");
+  }
+  void loadCompiled(JsCompiled compiled) {
+    throw Exception("NotImplemented");
+  }
 }
 
 class JsScriptPlugin {
