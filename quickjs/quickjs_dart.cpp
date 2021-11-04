@@ -1159,7 +1159,7 @@ public:
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
-                        temp_results.clear();
+                        temp_string.clear();
                         for (int i = 0; i < length; ++i) {
                             const char * chs = JS_AtomToCString(context, propertyEnum[i].atom);
                             if (i != 0) {
@@ -1167,6 +1167,9 @@ public:
                             }
                             temp_string += chs;
                         }
+                        for(int i = 0; i < length; i++)
+                            JS_FreeAtom(context, propertyEnum[i].atom);
+                        js_free(context, propertyEnum);
                         results[0].set(temp_string.c_str());
                         return 1;
                     }

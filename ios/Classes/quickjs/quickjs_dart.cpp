@@ -41,6 +41,8 @@ const int JS_ACTION_RUN_PROMISE = 11;
 const int JS_ACTION_PROPERTY_NAMES = 12;
 const int JS_ACTION_NEW_OBJECT = 13;
 const int JS_ACTION_NEW_ARRAYBUFFER = 14;
+const int JS_ACTION_COMPILE = 15;
+const int JS_ACTION_LOAD_COMPILED = 16;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;
@@ -1046,6 +1048,79 @@ public:
                 results[0].set("WrongArguments");
                 return -1;
             }
+            case JS_ACTION_COMPILE: {
+                if (argc == 2 &&
+                    arguments[0].type == ARG_TYPE_STRING &&
+                    arguments[1].type == ARG_TYPE_STRING) {
+                    const char *code = (const char *)arguments[0].ptrValue;
+                    const char *filename = (const char *)arguments[1].ptrValue;
+
+                    string strcode(code);
+                    if (!has_export(strcode)) {
+                        stringstream ss;
+                        ss << "const module = {exports: {}}; let exports = module.exports;" << endl;
+                        ss << code << endl;
+                        ss << "export default module.exports;" << endl;
+                        strcode = ss.str();
+                    }
+
+                    JSValue ret = JS_Eval(context, strcode.c_str(), strcode.size(), filename,
+                                          JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+                    if (JS_IsException(ret)) {
+                        JSValue ex = JS_GetException(context);
+                        temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
+                        results[0].set(temp_string.c_str());
+                        return -1;
+                    } else {
+                        int tag = JS_VALUE_GET_TAG(ret);
+                        if (tag == JS_TAG_MODULE) {
+                            size_t len = 0;
+                            uint8_t *buf = JS_WriteObject(context, &len, ret, JS_WRITE_OBJ_BYTECODE);
+                            void *mem = malloc(len);
+                            memcpy(mem, buf, len);
+                            js_free(context, buf);
+                            results[0].set((int64_t)len);
+                            results[1].setPointer(mem);
+                            return 2;
+                        } else {
+                            results[0].set("Script is not a module");
+                            return -1;
+                        }
+                    }
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
+            case JS_ACTION_LOAD_COMPILED: {
+                if (argc == 2 &&
+                    arguments[0].type == ARG_TYPE_RAW_POINTER &&
+                    (arguments[1].type == ARG_TYPE_INT32 || arguments[1].type == ARG_TYPE_INT64)) {
+                    uint8_t *buf = (uint8_t *)arguments[0].ptrValue;
+                    size_t buf_len = (size_t)arguments[1].intValue;
+                    JSValue value = JS_ReadObject(context, buf, buf_len, JS_READ_OBJ_BYTECODE);
+
+                    JSValue val = JS_EvalFunction(context, value);
+                    if (JS_IsException(val)) {
+                        JSValue ex = JS_GetException(context);
+                        temp_string = errorString(ex);
+                        JS_FreeValue(context, ex);
+                        results[0].set(temp_string.c_str());
+                        return -1;
+                    } else {
+                        JSModuleDef *module = (JSModuleDef *)JS_VALUE_GET_PTR(value);
+                        JSValue data = JS_GetModuleDefault(context, module);
+                        if (setArgument(results[0], data)) {
+                            temp_results.push_back(data);
+                        } else {
+                            JS_FreeValue(context, data);
+                        }
+                        return 1;
+                    }
+                }
+                results[0].set("WrongArguments");
+                return -1;
+            }
             case JS_ACTION_RUN_PROMISE: {
                 if (argc == 3 &&
                     arguments[0].type == ARG_TYPE_MANAGED_VALUE &&
@@ -1084,7 +1159,7 @@ public:
                         results[0].set(temp_string.c_str());
                         return -1;
                     } else {
-                        temp_results.clear();
+                        temp_string.clear();
                         for (int i = 0; i < length; ++i) {
                             const char * chs = JS_AtomToCString(context, propertyEnum[i].atom);
                             if (i != 0) {
@@ -1092,6 +1167,9 @@ public:
                             }
                             temp_string += chs;
                         }
+                        for(int i = 0; i < length; i++)
+                            JS_FreeAtom(context, propertyEnum[i].atom);
+                        js_free(context, propertyEnum);
                         results[0].set(temp_string.c_str());
                         return 1;
                     }
@@ -1353,6 +1431,7 @@ public:
         }
         return ret;
     }
+
 };
 
 JsContext *JsContext::_temp = nullptr;
