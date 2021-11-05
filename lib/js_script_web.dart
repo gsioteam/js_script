@@ -328,6 +328,7 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
 
   @override
   JsValue newObject() => WebJsValue(this, js.JsObject.jsify({}));
+  JsValue newArray() => WebJsValue(this, js.JsArray.from([]));
 
   @override
   run(String filepath) {

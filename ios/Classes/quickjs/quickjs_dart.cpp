@@ -43,6 +43,7 @@ const int JS_ACTION_NEW_OBJECT = 13;
 const int JS_ACTION_NEW_ARRAYBUFFER = 14;
 const int JS_ACTION_COMPILE = 15;
 const int JS_ACTION_LOAD_COMPILED = 16;
+const int JS_ACTION_NEW_ARRAY = 17;
 
 const int JS_ACTION_IS_ARRAY = 100;
 const int JS_ACTION_IS_FUNCTION = 101;
@@ -1179,6 +1180,12 @@ public:
             }
             case JS_ACTION_NEW_OBJECT: {
                 JSValue obj = JS_NewObject(context);
+                results[0].setPointer(JS_VALUE_GET_PTR(obj));
+                temp_results.push_back(obj);
+                return 1;
+            }
+            case JS_ACTION_NEW_ARRAY: {
+                JSValue obj = JS_NewArray(context);
                 results[0].setPointer(JS_VALUE_GET_PTR(obj));
                 temp_results.push_back(obj);
                 return 1;

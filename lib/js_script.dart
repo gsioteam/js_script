@@ -215,6 +215,7 @@ abstract class JsScript {
   JsValue function(Function(List argv) func);
 
   JsValue newObject();
+  JsValue newArray();
 
   JsBuffer newBuffer(int length);
 

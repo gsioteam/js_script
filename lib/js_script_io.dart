@@ -210,6 +210,17 @@ class IOJsValue extends JsValue {
       });
     }
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is IOJsValue)
+      return other._ptr == _ptr;
+    return super == other;
+  }
+
+  @override
+  int get hashCode => 0x7a00000 | _ptr.address;
+
 }
 
 void _printHandler(int type, Pointer<Utf8> str) {
@@ -683,6 +694,20 @@ class IOJsScript extends JsScript {
 
   JsValue newObject() {
     return _action(JS_ACTION_NEW_OBJECT, 0,
+      block: (results, len) {
+        if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
+          Pointer rawPtr = results[0].ptrValue;
+          var ptr = binder.retainValue(_context, rawPtr);
+          return IOJsValue._js(this, ptr.ref.ptrValue);
+        } else {
+          throw Exception("Wrong result");
+        }
+      },
+    );
+  }
+
+  JsValue newArray() {
+    return _action(JS_ACTION_NEW_ARRAY, 0,
       block: (results, len) {
         if (len == 1 && results[0].type == ARG_TYPE_RAW_POINTER) {
           Pointer rawPtr = results[0].ptrValue;
