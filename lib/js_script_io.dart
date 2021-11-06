@@ -748,7 +748,12 @@ class IOJsScript extends JsScript {
   }
 
   @override
-  JsBuffer newBuffer(int length) => IOJsBuffer(this, length);
+  JsBuffer newBuffer(int length) {
+    if (_disposed) {
+      throw Exception("Js context is already disposed.");
+    }
+    return IOJsBuffer(this, length);
+  }
 
   JsCompiled compile(String script, [String filepath = "<inline>"]) {
     _arguments[0].setString(script, this);
