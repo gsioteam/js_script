@@ -44,6 +44,18 @@ jsValue(dynamic value, WebJsScript script) {
   }
 }
 
+class WebJsCompiled extends JsCompiled {
+
+  late js.JsFunction _func;
+
+  WebJsCompiled(this._func);
+
+  @override
+  void dispose() {
+  }
+
+}
+
 class WebJsValue extends JsValue {
   js.JsObject _object;
 
@@ -380,11 +392,17 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
   JsBuffer newBuffer(int length) {
     throw UnimplementedError();
   }
+  js.JsFunction? _makeFunction;
   JsCompiled compile(String script, [String filepath = "<inline>"]) {
-    throw Exception("NotImplemented");
+    if (_makeFunction == null) {
+      _makeFunction = _eval.apply(["(function(source) {return new Function(source);})"]);
+    }
+    return WebJsCompiled(_makeFunction?.apply([script]));
   }
   void loadCompiled(JsCompiled compiled) {
-    throw Exception("NotImplemented");
+    if (compiled is WebJsCompiled) {
+      compiled._func.apply([]);
+    }
   }
 }
 
