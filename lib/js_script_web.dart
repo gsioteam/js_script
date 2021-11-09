@@ -32,13 +32,15 @@ jsValue(dynamic value, WebJsScript script) {
     return script.newPromise(handler);
   } else if (value is WebJsValue) {
     return value._object;
+  } else if (value is JsProxy) {
+    return (value.value as WebJsValue)._object;
   } else if (value is Function) {
     WebJsValue func = script.function((argv) => Function.apply(value, argv)) as WebJsValue;
     return func._object;
-  } else if (value is Map || value is List) {
-    WebJsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass) as WebJsValue;
-    obj = script.collectionWrap(obj) as WebJsValue;
-    return obj._object;
+  // } else if (value is Map || value is List) {
+  //   WebJsValue obj = script.bind(value, classInfo: value is Map ? mapClass : listClass) as WebJsValue;
+  //   obj = script.collectionWrap(obj) as WebJsValue;
+  //   return obj._object;
   } else {
     return value;
   }
@@ -73,7 +75,7 @@ class WebJsValue extends JsValue {
   dynamic get(dynamic key) => wrap(_object[key], script);
 
   dynamic invoke(String name, [List argv = const [],]) {
-    _object.callMethod(name, argv);
+    return wrap(_object.callMethod(name, argv.map((e) => jsValue(e, script)).toList()), script) ;
   }
 
   dynamic call([List argv = const []]) =>
