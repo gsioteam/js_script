@@ -47,7 +47,7 @@ const int MEMBER_GETTER       = 1 << 2;
 const int MEMBER_SETTER       = 1 << 3;
 const int MEMBER_STATIC       = 1 << 4;
 
-class _MemberInfo<T> {
+class _MemberInfo {
   String name;
   int type;
   CallFunction<dynamic> func;
@@ -60,7 +60,7 @@ class _MemberInfo<T> {
 class ClassInfo<T> {
   final String name;
   final Type type;
-  List<_MemberInfo<T>> members = [];
+  List<_MemberInfo> members = [];
 
   ClassInfo({
     String? name,
@@ -68,13 +68,13 @@ class ClassInfo<T> {
     Map<String, JsFunction<T>> functions = const {},
     Map<String, JsField<T, dynamic>> fields = const {},
   }) : type = T, name = name == null ? T.toString() : name {
-    members.add(_MemberInfo<T>(
+    members.add(_MemberInfo(
         this.name,
         MEMBER_CONSTRUCTOR,
         (script, argv) => newInstance(script, argv)
     ));
     functions.forEach((name, func) {
-      members.add(_MemberInfo<T>(
+      members.add(_MemberInfo(
         name,
         MEMBER_FUNCTION | (func.isStatic ? MEMBER_STATIC : 0),
         func.function
@@ -82,14 +82,14 @@ class ClassInfo<T> {
     });
     fields.forEach((name, field) {
       if (field.getter != null) {
-        members.add(_MemberInfo<T>(
+        members.add(_MemberInfo(
             name,
             MEMBER_GETTER | (field.isStatic ? MEMBER_STATIC : 0),
             field.getter!
         ));
       }
       if (field.setter != null) {
-        members.add(_MemberInfo<T>(
+        members.add(_MemberInfo(
             name,
             MEMBER_SETTER | (field.isStatic ? MEMBER_STATIC : 0),
             field.setter!
@@ -97,7 +97,7 @@ class ClassInfo<T> {
       }
     });
     if (!functions.containsKey("toString")) {
-      members.add(_MemberInfo<T>(
+      members.add(_MemberInfo(
           "toString",
           MEMBER_FUNCTION,
               (self, argv) => self.toString()
@@ -105,6 +105,55 @@ class ClassInfo<T> {
     }
   }
 
+  ClassInfo._({
+    required this.name,
+    required this.type,
+    required this.members
+  });
+
+  ClassInfo<M> inherit<M extends T>({
+    String? name,
+    M Function(JsScript, List argv)? newInstance,
+    Map<String, JsFunction<M>> functions = const {},
+    Map<String, JsField<M, dynamic>> fields = const {},
+  }) {
+    List<_MemberInfo> members = List.from(this.members);
+    if (newInstance != null) {
+      members[0] = _MemberInfo(
+          this.name,
+          MEMBER_CONSTRUCTOR,
+              (script, argv) => newInstance(script, argv)
+      );
+    }
+    functions.forEach((name, func) {
+      members.add(_MemberInfo(
+          name,
+          MEMBER_FUNCTION | (func.isStatic ? MEMBER_STATIC : 0),
+          func.function
+      ));
+    });
+    fields.forEach((name, field) {
+      if (field.getter != null) {
+        members.add(_MemberInfo(
+            name,
+            MEMBER_GETTER | (field.isStatic ? MEMBER_STATIC : 0),
+            field.getter!
+        ));
+      }
+      if (field.setter != null) {
+        members.add(_MemberInfo(
+            name,
+            MEMBER_SETTER | (field.isStatic ? MEMBER_STATIC : 0),
+            field.setter!
+        ));
+      }
+    });
+    return ClassInfo._(
+        name: name??M.toString(),
+        type: M,
+        members: members
+    );
+  }
 }
 
 abstract class JsDispose {
