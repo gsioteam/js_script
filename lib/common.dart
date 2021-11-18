@@ -30,6 +30,7 @@ ClassInfo<Map> mapClass = ClassInfo<Map>(
     functions: {
       "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
       "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
+      "toJSON": JsFunction.ins((obj, argv) => dartToJsValue((argv[0] as JsValue).script, obj)),
     },
     fields: {
       "length": JsField.ins(
@@ -44,6 +45,7 @@ ClassInfo<List> listClass = ClassInfo<List>(
     functions: {
       "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
       "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
+      "toJSON": JsFunction.ins((obj, argv) => dartToJsValue((argv[0] as JsValue).script, obj)),
     },
     fields: {
       "length": JsField.ins(

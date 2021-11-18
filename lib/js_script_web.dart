@@ -371,8 +371,10 @@ ${classInfo.name}${member.type & MEMBER_STATIC == 0 ? '.prototype' : ''}.${membe
 (function() {
     const handler = {
         get: function(obj, prop) {
-            if (prop == 'length')
+            if (prop === 'length')
                 return obj.length;
+            if (prop === 'toJSON') 
+                return function() {return obj.toJSON(obj);};
             return obj.get(prop);
         },
         set: function(obj, prop, value) {
