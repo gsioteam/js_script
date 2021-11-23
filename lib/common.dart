@@ -39,12 +39,20 @@ ClassInfo<Map> mapClass = ClassInfo<Map>(
     }
 );
 
+int _toIndex(data) {
+  if (data is String) {
+    return int.parse(data);
+  } else {
+    return data;
+  }
+}
+
 ClassInfo<List> listClass = ClassInfo<List>(
     name: "DartList",
     newInstance: (_,__) => [],
     functions: {
-      "set": JsFunction.ins((obj, argv) => obj[argv[0]] = argv[1]),
-      "get": JsFunction.ins((obj, argv) => obj[argv[0]]),
+      "set": JsFunction.ins((obj, argv) => obj[_toIndex(argv[0])] = argv[1]),
+      "get": JsFunction.ins((obj, argv) => obj[_toIndex(argv[0])]),
       "toJSON": JsFunction.ins((obj, argv) => dartToJsValue((argv[0] as JsValue).script, obj)),
     },
     fields: {
