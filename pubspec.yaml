@@ -1,6 +1,6 @@
 name: js_script
 description: Run JS script.
-version: 0.0.37
+version: 0.0.38
 homepage: https://github.com/gsioteam/js_script
 
 environment:

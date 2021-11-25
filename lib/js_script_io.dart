@@ -311,9 +311,9 @@ class IOJsScript extends JsScript {
   List<JsArgument> _results = [];
   late Pointer _context;
 
-  Set<IOJsValue> _cache = Set();
+  List<IOJsValue> _cache = [];
   Map<Pointer, dynamic> _instances = {};
-  Set<Pointer> _cachePromises = Set();
+  List<Pointer> _cachePromises = [];
 
   final int maxArguments;
 
