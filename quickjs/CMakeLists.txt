@@ -10,7 +10,10 @@ include_directories(quickjs)
 
 set(LIB_TYPE SHARED)
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Android")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        set(LIB_TYPE STATIC)
+
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Android")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "iOS")
         set(LIB_TYPE STATIC)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -52,7 +55,13 @@ add_library(
 )
 endif()
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        target_link_libraries(
+                qjs
+                -Wl,-Bsymbolic
+        )
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         set_target_properties(qjs PROPERTIES
         BUNDLE True
         MACOSX_BUNDLE_GUI_IDENTIFIER com.qlp.qjs

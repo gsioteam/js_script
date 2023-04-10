@@ -44,6 +44,8 @@ JSValue JS_GetModuleDefault(JSContext *ctx, JSModuleDef *module);
 typedef JSValue (*JS_PromiseCallback)(JSContext *ctx, JSValue value);
 void JS_SetPromiseTransform(JS_PromiseCallback callback);
 
+void jsContextSetup();
+
 #ifdef __cplusplus
 }
 #endif

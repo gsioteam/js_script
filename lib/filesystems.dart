@@ -96,7 +96,9 @@ class AsarFileSystem extends JsFileSystem {
   }
 
   @override
-  bool exist(String filename) => index.containsKey(filename);
+  bool exist(String filename) {
+    return index.containsKey(filename);
+  }
 
   @override
   String? read(String filename) {

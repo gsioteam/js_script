@@ -5,6 +5,7 @@
 #include <sys/utsname.h>
 
 #include <cstring>
+#include "quickjs/quickjs_ext.h"
 
 #define JS_SCRIPT_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), js_script_plugin_get_type(), \
@@ -22,7 +23,7 @@ static void js_script_plugin_handle_method_call(
     FlMethodCall* method_call) {
   g_autoptr(FlMethodResponse) response = nullptr;
 
-  const gchar* method = fl_method_call_get_name(method_call);
+  // const gchar* method = fl_method_call_get_name(method_call);
   response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   fl_method_call_respond(method_call, response, nullptr);
 }
@@ -57,4 +58,5 @@ void js_script_plugin_register_with_registrar(FlPluginRegistrar* registrar) {
                                             g_object_unref);
 
   g_object_unref(plugin);
+  jsContextSetup();
 }

@@ -15,6 +15,8 @@ add_library(${PLUGIN_NAME} SHARED
 target_link_libraries(
   ${PLUGIN_NAME}
 
+  PUBLIC
+
   qjs
 )
 apply_standard_settings(${PLUGIN_NAME})

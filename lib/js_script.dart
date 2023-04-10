@@ -88,13 +88,14 @@ extension JsFileSystemList on List<JsFileSystem> {
 
         String basename = path.dirname(filepath);
         while (true) {
-          if (basename.isEmpty || basename == "/") break;
+          if (basename.isEmpty) break;
           String modulePath = path.join(basename, 'node_modules', module);
           var newPath = testFile(modulePath);
           if (newPath != null) return newPath;
           basename = path.dirname(basename);
         }
 
+        print("$module is not found!");
       }
     } else {
       for (var fileSystem in this) {

@@ -26,10 +26,10 @@ typedef JsToDartActionFunc = Int32 Function(Pointer context, Int32 type, Int32 a
 
 class JsHandlers extends Struct {
   @Int32()
-  int? maxArguments;
+  external int? maxArguments;
 
-  Pointer<NativeFunction<JsPrintHandlerFunc>>? print;
-  Pointer<NativeFunction<JsToDartActionFunc>>? toDartAction;
+  external Pointer<NativeFunction<JsPrintHandlerFunc>>? print;
+  external Pointer<NativeFunction<JsToDartActionFunc>>? toDartAction;
 }
 
 class JsArgument extends Struct {

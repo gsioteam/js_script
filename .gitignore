@@ -2,3 +2,5 @@
 *.dill
 .idea
 .packages
+
+linux/build/
