@@ -18,7 +18,7 @@ enum JsValueType {
   DartClass
 }
 
-abstract class JsProxy {
+abstract mixin class JsProxy {
   JsValue get value;
 }
 

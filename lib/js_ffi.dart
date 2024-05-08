@@ -24,15 +24,15 @@ typedef JsContextReverseFunc = Void Function(Pointer context, Pointer backup);
 typedef JsPrintHandlerFunc = Void Function(Int32 type, Pointer<Utf8> str);
 typedef JsToDartActionFunc = Int32 Function(Pointer context, Int32 type, Int32 argc);
 
-class JsHandlers extends Struct {
+base class JsHandlers extends Struct {
   @Int32()
-  external int? maxArguments;
+  external int maxArguments;
 
-  external Pointer<NativeFunction<JsPrintHandlerFunc>>? print;
-  external Pointer<NativeFunction<JsToDartActionFunc>>? toDartAction;
+  external Pointer<NativeFunction<JsPrintHandlerFunc>> print;
+  external Pointer<NativeFunction<JsToDartActionFunc>> toDartAction;
 }
 
-class JsArgument extends Struct {
+base class JsArgument extends Struct {
   @Int16()
   external int type;
 
@@ -45,14 +45,14 @@ class JsArgument extends Struct {
   external Pointer ptrValue;
 }
 
-class JsMember extends Struct {
+base class JsMember extends Struct {
   external Pointer<Utf8> name;
 
   @Uint32()
   external int type;
 }
 
-class JsClass extends Struct {
+base class JsClass extends Struct {
   external Pointer<Utf8> name;
 
   @Int32()
