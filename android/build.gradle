@@ -30,7 +30,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            path 'src/main/cpp/quickjs/CMakeLists.txt'
+            path '../quickjs/CMakeLists.txt'
         }
     }
 }
